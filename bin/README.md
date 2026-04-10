@@ -30,5 +30,9 @@ Similar to Linux, please use `brew`:
 - `gitleaks`: Security tool to prevent secret leaks.
 
 ---
-**Note:** If you want to automate the setup on Windows, run:
-`python bin/setup_bins.py --install`
+**Note for Windows Users:**
+The binaries are already included. You can verify they are all present by running:
+`python bin/setup_bins.py`
+
+**Note for Linux Users:**
+Please refer to the "Linux" section above for manual installation instructions.
