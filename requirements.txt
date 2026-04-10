@@ -1,0 +1,8 @@
+mcp
+fastmcp
+ollama
+pydantic
+duckduckgo-search
+psutil
+numpy
+PyYAML
