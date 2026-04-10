@@ -1,18 +1,24 @@
 from fastmcp import FastMCP
 
-def register_research_tools(mcp: FastMCP, search_svc, validator_svc, stackoverflow_svc):
+def register_research_tools(mcp: FastMCP, search_svc, validator_svc, stackoverflow_svc, diag_svc):
     @mcp.tool()
     async def validate_syntax(content: str, extension: str) -> str:
         """
         Validate code syntax locally without any AI. 
         Supports: json, yaml, py, xml, js, ts, mjs, cjs, mts, cts.
         """
+        err = await diag_svc.check_tool_dependency("validate_syntax")
+        if err: return err
+
         valid, msg = validator_svc.validate(content, extension)
         return f"SUCCESS" if valid else f"FAILURE: {msg}"
 
     @mcp.tool()
     async def web_search(query: str, max_results: int = 5) -> str:
-        """Search the web for up-to-date information. Use when you need current docs, error messages, or external references."""
+        """Search the web for up-to-date information."""
+        err = await diag_svc.check_tool_dependency("web_search")
+        if err: return err
+
         results = await search_svc.search(query, max_results)
         if not results:
             return "No results found."
@@ -22,10 +28,10 @@ def register_research_tools(mcp: FastMCP, search_svc, validator_svc, stackoverfl
 
     @mcp.tool()
     async def search_stackoverflow(query: str, max_results: int = 3) -> str:
-        """
-        Search Stack Overflow for technical questions and accepted answers.
-        Useful for debugging, finding code examples, and technical solutions.
-        """
+        """Search Stack Overflow for technical questions and accepted answers."""
+        err = await diag_svc.check_tool_dependency("search_stackoverflow")
+        if err: return err
+
         results = await stackoverflow_svc.search(query, max_results)
         if not results:
             return "No Stack Overflow results found."

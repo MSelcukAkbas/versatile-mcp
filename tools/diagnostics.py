@@ -5,14 +5,16 @@ import platform
 import psutil
 from fastmcp import FastMCP
 
-def register_diagnostic_tools(mcp: FastMCP, audit_logs_path, memory_path, PROJECT_ROOT, SERVER_HOME):
+def register_diagnostic_tools(mcp: FastMCP, diag_svc, audit_logs_path, memory_path, PROJECT_ROOT, SERVER_HOME):
     @mcp.tool()
     async def get_tool_inventory() -> str:
-        """Returns all tools with descriptions and resource costs."""
+        """Returns all tools with descriptions and current health status."""
+        report = await diag_svc.get_health_report()
         inventory = {
+            "System_Health": report["components"],
             "Intelligence & Research": {
                 "Tools": ["ask_expert", "list_models", "show_model", "web_search", "search_stackoverflow"],
-                "Description": "Local LLM consultation via Ollama and global knowledge retrieval."
+                "Description": "Local LLM consultation and global knowledge retrieval."
             },
             "Advanced Reasoning": {
                 "Tools": ["sequentialthinking", "clear_thinking", "create_plan", "task_mark_step"],
@@ -20,18 +22,24 @@ def register_diagnostic_tools(mcp: FastMCP, audit_logs_path, memory_path, PROJEC
             },
             "Unified Lite Memory": {
                 "Tools": ["memory_store_fact", "memory_store_user_habit", "memory_retrieve_facts", "memory_index_file", "memory_index_workspace", "memory_search_semantic"],
-                "Description": "Zero-clutter RAG & Fact system using SQLite+Numpy. Facts are auto-indexed semantically."
+                "Description": "RAG & Fact system. Facts are auto-indexed semantically."
             },
             "Smart File Operations": {
                 "Tools": ["read_file", "write_file", "edit_file", "list_directory", "directory_tree", "search_files", "validate_syntax"],
-                "Description": "Intelligent file management with syntax validation and recursive search."
+                "Description": "File management with syntax validation and recursive search."
             },
             "System & Project Monitoring": {
-                "Tools": ["system_info", "debug_paths", "list_audit_logs", "get_project_history", "task_get_active"],
-                "Description": "Health checks, audit logs, and multi-project history tracking."
+                "Tools": ["system_info", "debug_paths", "list_audit_logs", "get_project_history", "task_get_active", "simulate_diagnostic_failure"],
+                "Description": "Health checks, audit logs, and diagnostic simulations."
             }
         }
         return json.dumps(inventory, indent=2, ensure_ascii=False)
+
+    @mcp.tool()
+    async def simulate_diagnostic_failure(component: str) -> str:
+        """Simulate a failure for a component (e.g. 'ollama', 'rg') to test Degraded Mode."""
+        diag_svc.simulate_failure(component)
+        return f"Simulated failure for '{component}'. Run get_tool_inventory or a tool requiring it to see effects."
 
     @mcp.tool()
     async def list_audit_logs() -> str:

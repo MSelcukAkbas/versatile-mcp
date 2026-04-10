@@ -1,6 +1,6 @@
 from fastmcp import FastMCP
 
-def register_ai_tools(mcp: FastMCP, ollama_svc, prompt_svc):
+def register_ai_tools(mcp: FastMCP, ollama_svc, prompt_svc, diag_svc):
     @mcp.tool()
     async def ask_expert(
         prompt: str,
@@ -10,35 +10,10 @@ def register_ai_tools(mcp: FastMCP, ollama_svc, prompt_svc):
     ) -> str:
         """
         Consult a local specialized AI expert for a second opinion on a specific question.
-
-        ⚠️  CRITICAL CONSTRAINTS — READ BEFORE CALLING:
-        - The expert is COMPLETELY STATELESS. It has NO memory of previous messages,
-          no access to conversation history, and cannot see any files on disk.
-        - The expert ONLY knows what you explicitly pass in this single call.
-        - YOU (the calling model) must gather and summarize all relevant context before
-          calling this tool. Do NOT assume the expert can look up anything itself.
-
-        WHEN TO USE:
-        - Getting an independent code review on a specific snippet.
-        - Asking for a second opinion on an architectural decision.
-        - Validating a solution before applying it.
-        - Getting a specialized analysis (security, performance, etc.).
-
-        WHEN NOT TO USE:
-        - For tasks you can reason through yourself — call this sparingly.
-        - When the relevant code/context exceeds what fits in 'context' — summarize first.
-
-        Parameters:
-        - prompt   : Your specific, self-contained question for the expert.
-        - context  : ALL relevant background the expert needs: file contents, error logs,
-                     architecture notes, constraints, etc. This is MANDATORY — without it
-                     the expert cannot give a useful answer.
-        - template : Expert persona template to use (default: 'technical').
-                     Available: 'technical', 'auditor', etc.
-        - model    : Local Ollama model to use.
-
-        Returns: The expert's response as a string.
         """
+        err = await diag_svc.check_tool_dependency("ask_expert")
+        if err: return err
+
         template_content = prompt_svc.get_template(template)
         if not template_content:
             return f"Error: Template '{template}' not found."
@@ -60,17 +35,18 @@ def register_ai_tools(mcp: FastMCP, ollama_svc, prompt_svc):
 
     @mcp.tool()
     async def list_models() -> str:
-        """List all downloaded Ollama models available on this machine.
-        Call this before using ask_expert to verify the model name exists.
-        """
+        """List all downloaded Ollama models available on this machine."""
+        err = await diag_svc.check_tool_dependency("list_models")
+        if err: return err
+
         import json
         models = await ollama_svc.list_models()
         if not models:
             return "No models found or Ollama is not running."
         summary = []
         for m in models:
-            err = m.get("error")
-            if not err:
+            err_msg = m.get("error")
+            if not err_msg:
                 summary.append({
                     "name": m.get("model") or m.get("name", "unknown"),
                     "size_gb": round(m.get("size", 0) / 1e9, 2),
@@ -80,9 +56,10 @@ def register_ai_tools(mcp: FastMCP, ollama_svc, prompt_svc):
 
     @mcp.tool()
     async def show_model(name: str) -> str:
-        """Get detailed information about a specific Ollama model (parameters, template, etc.).
-        Use this to inspect a model's capabilities before running ask_expert with it.
-        """
+        """Get detailed information about a specific Ollama model (parameters, template, etc.)."""
+        err = await diag_svc.check_tool_dependency("show_model")
+        if err: return err
+
         import json
         info = await ollama_svc.show_model(name)
         if "error" in info:

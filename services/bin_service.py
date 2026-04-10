@@ -57,3 +57,11 @@ class BinService:
     def is_tool_available(self, tool_name: str) -> bool:
         """Check if a tool is available either locally or in PATH."""
         return self.get_binary_path(tool_name) is not None
+
+    def check_all_bins(self) -> dict:
+        """Check availability of all required tools."""
+        tools = ["ruff", "rg", "oxlint", "biome", "gitleaks"]
+        results = {}
+        for tool in tools:
+            results[tool] = self.is_tool_available(tool)
+        return results

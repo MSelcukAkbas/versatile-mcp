@@ -6,27 +6,28 @@ from .memory import register_memory_tools
 from .task_management import register_task_tools
 from .diagnostics import register_diagnostic_tools
 
-def register_all_tools(mcp, services, paths, ollama_ready: bool):
+def register_all_tools(mcp, services, paths):
+    diag_svc = services['diag']
+    
     # Specialized Intelligence tools
-    if ollama_ready:
-        register_ai_tools(mcp, services['ollama'], services['prompt'])
-    else:
-        services['logger'].warning("Ollama is not ready. AI Assistant tools will not be registered.")
-    register_reasoning_tools(mcp, services['thinking'])
-    register_research_tools(mcp, services['search'], services['validator'], services['stackoverflow'])
+    register_ai_tools(mcp, services['ollama'], services['prompt'], diag_svc)
+    register_reasoning_tools(mcp, services['thinking'], diag_svc)
+    register_research_tools(mcp, services['search'], services['validator'], services['stackoverflow'], diag_svc)
     
     # Other domains
-    register_file_tools(mcp, services['file'])
+    register_file_tools(mcp, services['file'], diag_svc)
     register_memory_tools(
         mcp, 
         services['memory'], 
         services['task'], 
         paths['PROJECT_ROOT'], 
-        services['logger']
+        services['logger'],
+        diag_svc
     )
-    register_task_tools(mcp, services['task'], services['planner'])
+    register_task_tools(mcp, services['task'], services['planner'], diag_svc)
     register_diagnostic_tools(
         mcp, 
+        services['diag'],
         paths['audit_logs'], 
         paths['memory'], 
         paths['PROJECT_ROOT'], 

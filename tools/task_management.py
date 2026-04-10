@@ -3,7 +3,7 @@ from typing import List, Optional, Dict, Any
 from fastmcp import FastMCP
 
 
-def register_task_tools(mcp: FastMCP, task_svc, planner_svc):
+def register_task_tools(mcp: FastMCP, task_svc, planner_svc, diag_svc):
 
     @mcp.tool()
     async def create_plan(

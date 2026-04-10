@@ -12,7 +12,9 @@ if sys.platform == "win32":
 
 # 2. Service Imports
 from services.env_service import EnvService
+from services.bin_service import BinService
 from services.ollama_service import OllamaService
+from services.diagnostic_service import DiagnosticService
 from services.file_service import FileService
 from services.prompt_service import PromptService
 from services.search_service import SearchService
@@ -38,21 +40,20 @@ def bootstrap():
     # 0. Environment Verification & Auto-Setup
     logger.info("Bootstrap | Checking dependencies...")
     EnvService.check_and_install_dependencies(PATHS["requirements"])
-    logger.info("Bootstrap | Checking Ollama status...")
-    ollama_ready = EnvService.check_ollama_status(OLLAMA_HOST)
     
     ensure_directories()
-    logger.info(f"Bootstrap | Ollama ready={ollama_ready}")
-
-    mcp = FastMCP("Master-MCP")
     
-    if not ollama_ready:
-        logger.warning("Bootstrap | Ollama not detected. AI-related tools will be DISABLED.")
-
+    mcp = FastMCP("Versatile-MCP")
+    
     logger.info("Bootstrap | Initializing services...")
+    bin_svc = BinService(PATHS["PROJECT_ROOT"])
+    ollama_svc = OllamaService(host=OLLAMA_HOST)
+    
     services = {
         "file": FileService(ALLOWED_ROOTS),
-        "ollama": OllamaService(host=OLLAMA_HOST),
+        "ollama": ollama_svc,
+        "bin": bin_svc,
+        "diag": DiagnosticService(ollama_svc, bin_svc),
         "prompt": PromptService(PATHS["prompts"]),
         "search": SearchService(),
         "stackoverflow": StackOverflowService(api_key=os.getenv("STACK_EXCHANGE_API_KEY")),
@@ -71,7 +72,7 @@ def bootstrap():
     logger.info("Bootstrap | AuditMiddleware registered (JSONL format).")
     
     # Register All Tools
-    register_all_tools(mcp, services, PATHS, ollama_ready)
+    register_all_tools(mcp, services, PATHS)
     logger.info("Bootstrap | All tools registered. Server ready.")
     
     return mcp, logger

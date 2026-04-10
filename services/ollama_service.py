@@ -55,3 +55,12 @@ class OllamaService:
             return response.get('message', {}).get('content', '')
         except Exception as e:
             return f"Error in chat: {str(e)}"
+
+    async def is_ready(self) -> bool:
+        """Check if Ollama service is reachable and responsive."""
+        try:
+            # We use list() as a lightweight health check
+            await self.client.list()
+            return True
+        except Exception:
+            return False
