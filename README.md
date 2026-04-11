@@ -74,9 +74,7 @@ Add this to your MCP settings (e.g. Claude Desktop):
       "command": "python",
       "args": ["C:/absolute/path/to/versatile-mcp/mcp_master/main.py"],
       "env": {
-        "PYTHONPATH": "C:/absolute/path/to/versatile-mcp",
         "PROJECT_ROOT": "C:/Your/Current/Working/Project",
-        "GITHUB_PERSONAL_ACCESS_TOKEN": "your_github_pat_here",
         "STACK_EXCHANGE_API_KEY": "your_api_key_here_optional"
       }
     }
