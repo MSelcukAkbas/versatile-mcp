@@ -11,7 +11,9 @@ class BinService:
     
     def __init__(self, project_root: str = None):
         # We find the server home relative to this file
-        self.server_home = Path(__file__).parent.parent.resolve()
+        # After refactoring, this file is in services/core/
+        # so we need to go up 3 levels to reach the project root (mcp_master)
+        self.server_home = Path(__file__).parents[2].resolve()
         
         # Binary resolution should ALWAYS be relative to the server source
         # regardless of what the current project_root is.
