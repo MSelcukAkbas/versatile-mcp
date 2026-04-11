@@ -1,5 +1,6 @@
 import os
 import sys
+from pathlib import Path
 
 # Ensure the project root is in sys.path for internal imports
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -19,10 +20,13 @@ if sys.platform == "win32":
 from services.core.env_service import EnvService
 from services.core.bin_service import BinService
 from services.core.diagnostic_service import DiagnosticService
+from services.core.diagnostic_service import DiagnosticService
 from services.core.file_service import FileService
 from services.core.validation_service import ValidationService
 from services.core.audit_service import AuditService, AuditMiddleware
 from services.core.logger_service import setup_logger, log_startup_banner
+from services.core.process_service import ProcessService
+from services.knowledge.http_client_service import HttpClientService
 
 # AI
 from services.ai.ollama_service import OllamaService
@@ -35,11 +39,7 @@ from services.knowledge.document_service import DocumentService
 from services.knowledge.search_service import SearchService
 from services.knowledge.stackoverflow_service import StackOverflowService
 from services.knowledge.memory_service import MemoryService
-<<<<<<< HEAD
 from services.knowledge.git_service import GitService
-=======
-from services.knowledge.github_service import GitHubService
->>>>>>> 6018f667c25b3f3db7fdd2593e7e548fc6bcaffc
 
 
 # Orchestration
@@ -70,11 +70,7 @@ def bootstrap():
     llama_svc = LlamaService(model_path=PATHS["embedding_model"])
     doc_svc = DocumentService()
     
-<<<<<<< HEAD
     git_svc = GitService(logger, bin_svc)
-=======
-    github_svc = GitHubService(logger)
->>>>>>> 6018f667c25b3f3db7fdd2593e7e548fc6bcaffc
     
     services = {
         "file": FileService(ALLOWED_ROOTS),
@@ -82,11 +78,7 @@ def bootstrap():
         "llama": llama_svc,
         "doc": doc_svc,
         "bin": bin_svc,
-<<<<<<< HEAD
         "diag": DiagnosticService(ollama_svc, bin_svc, git_svc),
-=======
-        "diag": DiagnosticService(ollama_svc, bin_svc, github_svc),
->>>>>>> 6018f667c25b3f3db7fdd2593e7e548fc6bcaffc
         "prompt": PromptService(PATHS["prompts"]),
         "search": SearchService(),
         "stackoverflow": StackOverflowService(api_key=os.getenv("STACK_EXCHANGE_API_KEY")),
@@ -96,12 +88,10 @@ def bootstrap():
         "memory": MemoryService(PATHS["local_memory"], PATHS["global_memory"], llama_svc),
         "task": TaskService(PATHS["tasks"]),
         "audit": AuditService(PATHS["audit_logs"]),
-<<<<<<< HEAD
         "git": git_svc,
-=======
-        "github": github_svc,
->>>>>>> 6018f667c25b3f3db7fdd2593e7e548fc6bcaffc
-        "logger": logger
+        "logger": logger,
+        "process": ProcessService(Path(PATHS["SERVER_HOME"]) / ".mcp-master"),
+        "http": HttpClientService(),
     }
     logger.info(f"Bootstrap | {len(services)} services initialized.")
     

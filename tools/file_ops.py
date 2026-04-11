@@ -1,5 +1,6 @@
 import json
 import os
+import re
 from typing import Optional, List
 from fastmcp import FastMCP
 
@@ -105,3 +106,91 @@ def register_file_tools(mcp: FastMCP, file_svc, diag_svc):
     async def list_allowed_directories() -> str:
         """List allowed project directories."""
         return f"Allowed: {file_svc.list_allowed_directories()}"
+
+    # --- Feature: Diff & Patch ---
+
+    @mcp.tool()
+    async def diff_files(path_a: str, path_b: str, context_lines: int = 3) -> str:
+        """Return a unified diff between two files."""
+        try:
+            return file_svc.diff_files(path_a, path_b, context_lines)
+        except Exception as e:
+            return str(e)
+
+    @mcp.tool()
+    async def diff_strings(text_a: str, text_b: str,
+                           label_a: str = "original", label_b: str = "modified",
+                           context_lines: int = 3) -> str:
+        """Return a unified diff between two text strings."""
+        try:
+            return file_svc.diff_strings(text_a, text_b, label_a, label_b, context_lines)
+        except Exception as e:
+            return str(e)
+
+    @mcp.tool()
+    async def apply_patch(target_path: str, patch_text: str) -> str:
+        """Apply a unified diff patch to a file in-place."""
+        try:
+            return file_svc.apply_patch(target_path, patch_text)
+        except Exception as e:
+            return str(e)
+
+    # --- Feature: Env File Manager ---
+
+    _SENSITIVE = re.compile(r"(secret|token|password|passwd|key|api_key|auth)", re.IGNORECASE)
+
+    @mcp.tool()
+    async def read_env_file(env_path: str) -> str:
+        """
+        Parse a .env file and return its key-value pairs.
+        Values whose keys match sensitive patterns (SECRET, TOKEN, PASSWORD, KEY…) are masked.
+        """
+        try:
+            raw = file_svc.read_text_file(env_path)
+        except Exception as e:
+            return str(e)
+
+        rows = []
+        for line in raw.splitlines():
+            stripped = line.strip()
+            if not stripped or stripped.startswith("#"):
+                continue
+            if "=" not in stripped:
+                continue
+            key, _, val = stripped.partition("=")
+            key = key.strip()
+            val = val.strip().strip('"').strip("'")
+            if _SENSITIVE.search(key):
+                val = "***"
+            rows.append(f"{key}={val}")
+        return "\n".join(rows) if rows else "(empty .env file)"
+
+    @mcp.tool()
+    async def write_env_key(env_path: str, key: str, value: str) -> str:
+        """Add or update a key in a .env file."""
+        try:
+            try:
+                raw = file_svc.read_text_file(env_path)
+            except FileNotFoundError:
+                raw = ""
+
+            lines = raw.splitlines(keepends=True)
+            found = False
+            new_lines = []
+            for line in lines:
+                if line.startswith(f"{key}=") or line.startswith(f"{key} ="):
+                    new_lines.append(f"{key}={value}\n")
+                    found = True
+                else:
+                    new_lines.append(line)
+
+            if not found:
+                if new_lines and not new_lines[-1].endswith("\n"):
+                    new_lines.append("\n")
+                new_lines.append(f"{key}={value}\n")
+
+            file_svc.write_file(env_path, "".join(new_lines))
+            action = "updated" if found else "added"
+            return f"Key '{key}' {action} in {env_path}."
+        except Exception as e:
+            return str(e)

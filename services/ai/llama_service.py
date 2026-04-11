@@ -34,7 +34,7 @@ class LlamaService:
                     model_path=self.model_path,
                     embedding=True,
                     verbose=False,  # Set to True for debugging llama.cpp output
-                    n_ctx=512,      # Standard context window
+                    n_ctx=511,      # Adjusted to avoid context overflow warning (train=511)
                     n_threads=os.cpu_count() or 4
                 )
                 logger.info("LlamaService | Local model loaded successfully.")

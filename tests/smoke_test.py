@@ -17,7 +17,7 @@ async def main():
     ensure_directories()
     
     # Initialize Services
-    file_svc = FileService(PATHS["PROJECT_ROOT"])
+    file_svc = FileService([PATHS["PROJECT_ROOT"]])
     planner_svc = PlannerService()
     validator_svc = ValidationService()
 

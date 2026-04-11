@@ -121,3 +121,36 @@ def register_diagnostic_tools(mcp: FastMCP, diag_svc, audit_logs_path, memory_pa
                 "note": f"Extended info unavailable: {str(e)}"
             }
             return json.dumps(info, indent=2, ensure_ascii=False)
+
+    # --- Feature: Process & Port Inspector ---
+
+    @mcp.tool()
+    async def check_port(port: int) -> str:
+        """Check whether a TCP port is in use and which process holds it."""
+        result = diag_svc.check_port(port)
+        if "error" in result:
+            return f"Error: {result['error']}"
+        if result["in_use"]:
+            return (
+                f"Port {port} is IN USE\n"
+                f"  PID:     {result['pid']}\n"
+                f"  Process: {result['process'] or 'unknown'}\n"
+                f"  Status:  {result['status']}"
+            )
+        return f"Port {port} is free."
+
+    @mcp.tool()
+    async def find_process(name: str) -> str:
+        """Find running processes whose name contains *name* (case-insensitive)."""
+        results = diag_svc.find_process(name)
+        if not results:
+            return f"No running process found matching '{name}'."
+        if "error" in results[0]:
+            return f"Error: {results[0]['error']}"
+        lines = [f"Found {len(results)} process(es) matching '{name}':"]
+        for p in results:
+            lines.append(
+                f"  PID {p['pid']}  [{p['status']}]  {p['name']}"
+                + (f"\n    cmd: {p['cmdline']}" if p["cmdline"] else "")
+            )
+        return "\n".join(lines)

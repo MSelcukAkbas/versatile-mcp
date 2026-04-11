@@ -4,6 +4,7 @@ import time
 import json
 import pathlib
 import subprocess
+import difflib
 from services.core.logger_service import setup_logger
 from services.core.bin_service import BinService
 from typing import List, Optional, Dict, Any
@@ -211,3 +212,104 @@ class FileService:
             except Exception as e:
                 results[path] = f"Error: {str(e)}"
         return results
+
+    # ------------------------------------------------------------------
+    # Diff & Patch
+    # ------------------------------------------------------------------
+
+    def diff_files(self, path_a: str, path_b: str, context_lines: int = 3) -> str:
+        """Return a unified diff between two files."""
+        text_a = self.read_text_file(path_a).splitlines(keepends=True)
+        text_b = self.read_text_file(path_b).splitlines(keepends=True)
+        lines = list(difflib.unified_diff(
+            text_a, text_b,
+            fromfile=path_a, tofile=path_b,
+            n=context_lines,
+        ))
+        if not lines:
+            return "Files are identical."
+        return "".join(lines)
+
+    def diff_strings(self, text_a: str, text_b: str,
+                     label_a: str = "original", label_b: str = "modified",
+                     context_lines: int = 3) -> str:
+        """Return a unified diff between two strings."""
+        lines = list(difflib.unified_diff(
+            text_a.splitlines(keepends=True),
+            text_b.splitlines(keepends=True),
+            fromfile=label_a, tofile=label_b,
+            n=context_lines,
+        ))
+        if not lines:
+            return "Strings are identical."
+        return "".join(lines)
+
+    def apply_patch(self, target_path: str, patch_text: str) -> str:
+        """
+        Apply a unified diff patch to *target_path* in-place.
+        Returns a status message.
+        """
+        resolved = self._resolve_path(target_path)
+        original = pathlib.Path(resolved).read_text(encoding="utf-8")
+        original_lines = original.splitlines(keepends=True)
+
+        import subprocess, tempfile, os
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".patch", delete=False, encoding="utf-8") as pf:
+            pf.write(patch_text)
+            patch_file = pf.name
+        try:
+            result = subprocess.run(
+                ["patch", "-u", resolved, patch_file],
+                capture_output=True, text=True
+            )
+            if result.returncode == 0:
+                return f"Patch applied successfully to {target_path}."
+            return f"patch command failed (rc={result.returncode}): {result.stderr.strip()}"
+        except FileNotFoundError:
+            # 'patch' binary not available — manual apply using difflib
+            return self._manual_apply_patch(resolved, original_lines, patch_text)
+        finally:
+            os.remove(patch_file)
+
+    def _manual_apply_patch(self, resolved_path: str, original_lines: List[str], patch_text: str) -> str:
+        """Minimal unified-diff applier when the 'patch' binary is absent."""
+        patched: List[str] = list(original_lines)
+        offset = 0
+        hunk: List[str] = []
+        old_start = 0
+
+        for line in patch_text.splitlines(keepends=True):
+            if line.startswith("@@"):
+                if hunk:
+                    offset = self._apply_hunk(patched, hunk, old_start, offset)
+                    hunk = []
+                # parse @@ -old_start,… @@
+                parts = line.split()
+                old_range = parts[1]  # e.g. -10,5
+                old_start = abs(int(old_range.split(",")[0]))
+            elif line.startswith(("---", "+++")):
+                pass
+            else:
+                hunk.append(line)
+
+        if hunk:
+            self._apply_hunk(patched, hunk, old_start, offset)
+
+        pathlib.Path(resolved_path).write_text("".join(patched), encoding="utf-8")
+        return f"Patch applied (manual mode) to {resolved_path}."
+
+    def _apply_hunk(self, patched: List[str], hunk: List[str], old_start: int, offset: int) -> int:
+        """Apply one hunk; return updated offset."""
+        idx = old_start - 1 + offset
+        for line in hunk:
+            if line.startswith(" "):
+                idx += 1
+            elif line.startswith("-"):
+                if idx < len(patched):
+                    del patched[idx]
+                    offset -= 1
+            elif line.startswith("+"):
+                patched.insert(idx, line[1:])
+                idx += 1
+                offset += 1
+        return offset

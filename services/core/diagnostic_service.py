@@ -3,23 +3,17 @@ import time
 from typing import Dict, Any, List, Optional
 from services.core.logger_service import setup_logger
 
+
 logger = setup_logger("DiagnosticService")
 
 class DiagnosticService:
-<<<<<<< HEAD
     """Consolidated health monitoring for all Master MCP dependencies."""
-    
-=======
->>>>>>> 6018f667c25b3f3db7fdd2593e7e548fc6bcaffc
-    def __init__(self, ollama_svc, bin_svc, github_svc=None):
+    def __init__(self, ollama_svc, bin_svc, git_svc=None):
         self.ollama = ollama_svc
         self.bin = bin_svc
-        self.github = github_svc
-<<<<<<< HEAD
+        self.git = git_svc
         
         # Cache management
-=======
->>>>>>> 6018f667c25b3f3db7fdd2593e7e548fc6bcaffc
         self._last_check_time = 0
         self._cache_duration = 180
         self._health_cache = {}
@@ -33,9 +27,6 @@ class DiagnosticService:
         ollama_ok = await self.ollama.is_ready() if "ollama" not in self._simulated_failures else False
         bin_results = self.bin.check_all_bins()
         
-        github_status = {"status": "Offline", "details": "GitHub service not initialized"}
-        if self.github:
-            github_status = self.github.get_status()
 
         # Git Check
         git_status = {"status": "Offline", "details": "Git binary not found"}
@@ -45,7 +36,6 @@ class DiagnosticService:
         self._health_cache = {
             "timestamp": now,
             "components": {
-<<<<<<< HEAD
                 "ollama": {
                     "status": "Online" if ollama_ok else "Offline",
                     "details": "Local Ollama service responsive" if ollama_ok else "Service unreachable on localhost:11434"
@@ -55,11 +45,6 @@ class DiagnosticService:
                     "details": bin_results
                 },
                 "git": git_status
-=======
-                "ollama": {"status": "Online" if ollama_ok else "Offline", "details": "Ollama service status"},
-                "binaries": {"status": "Online" if all(bin_results.values()) else "Degraded", "details": bin_results},
-                "github": github_status
->>>>>>> 6018f667c25b3f3db7fdd2593e7e548fc6bcaffc
             }
         }
         self._last_check_time = now
@@ -69,12 +54,6 @@ class DiagnosticService:
         report = await self.get_health_report()
         components = report.get("components", {})
         
-        github_tools = ["github_api_push", "github_api_diff", "github_api_sync", "github_manage_issues", "github_api_get_file"]
-        if tool_name in github_tools:
-            if components["github"]["status"] != "Online":
-                return f"GitHub Error: {components['github']['details']}. Please check token permissions."
-        
-<<<<<<< HEAD
         # Git tools dependency
         git_tools = ["git_push", "git_pull", "git_diff", "git_status"]
         if tool_name in git_tools:
@@ -97,10 +76,60 @@ class DiagnosticService:
                     return f"Missing required binaries for full validation: {', '.join(missing)}"
             elif not bin_details.get(dep, True):
                 return f"The '{dep}' binary is missing. Please check your bin/ directory."
-=======
-        if tool_name in ["ask_expert", "list_models"]: 
+
+        if tool_name in ["ask_expert", "list_models"]:
              if components["ollama"]["status"] != "Online":
                 return "Ollama service is unreachable."
->>>>>>> 6018f667c25b3f3db7fdd2593e7e548fc6bcaffc
-                
+
         return None
+
+    # ------------------------------------------------------------------
+    # Process & Port Inspection
+    # ------------------------------------------------------------------
+
+    def check_port(self, port: int) -> Dict[str, Any]:
+        """Return whether a TCP port is in use and which process holds it."""
+        try:
+            import psutil
+        except ImportError:
+            return {"error": "psutil not installed. Run: pip install psutil"}
+
+        for conn in psutil.net_connections(kind="inet"):
+            if conn.laddr and conn.laddr.port == port:
+                pid = conn.pid
+                proc_name = None
+                if pid:
+                    try:
+                        proc_name = psutil.Process(pid).name()
+                    except (psutil.NoSuchProcess, psutil.AccessDenied):
+                        pass
+                return {
+                    "port": port,
+                    "in_use": True,
+                    "pid": pid,
+                    "process": proc_name,
+                    "status": conn.status,
+                }
+        return {"port": port, "in_use": False, "pid": None, "process": None}
+
+    def find_process(self, name: str) -> List[Dict[str, Any]]:
+        """Find running processes whose name contains *name* (case-insensitive)."""
+        try:
+            import psutil
+        except ImportError:
+            return [{"error": "psutil not installed. Run: pip install psutil"}]
+
+        results = []
+        needle = name.lower()
+        for proc in psutil.process_iter(["pid", "name", "status", "cmdline"]):
+            try:
+                if needle in (proc.info["name"] or "").lower():
+                    results.append({
+                        "pid": proc.info["pid"],
+                        "name": proc.info["name"],
+                        "status": proc.info["status"],
+                        "cmdline": " ".join(proc.info["cmdline"] or [])[:200],
+                    })
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                continue
+        return results
