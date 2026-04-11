@@ -2,18 +2,20 @@ import sys
 import platform
 import os
 from pathlib import Path
-from services.logger_service import setup_logger
+from services.core.logger_service import setup_logger
 
 logger = setup_logger("BinService")
 
 class BinService:
     """Service to resolve platform-specific binary paths."""
     
-    def __init__(self, project_root: Path = None):
-        if project_root:
-            self.project_root = project_root
-        else:
-            self.project_root = Path(__file__).parent.parent
+    def __init__(self, project_root: str = None):
+        # We find the server home relative to this file
+        self.server_home = Path(__file__).parent.parent.resolve()
+        
+        # Binary resolution should ALWAYS be relative to the server source
+        # regardless of what the current project_root is.
+        self.bin_root = self.server_home / "bin"
             
         self.os_name = sys.platform  # 'win32', 'linux', etc.
         self.machine = platform.machine().lower()  # 'amd64', 'x86_64', 'arm64', etc.
@@ -36,7 +38,7 @@ class BinService:
         """
         # 1. Check local bin directory
         bin_ext = ".exe" if self.os_name == "win32" else ""
-        local_path = self.project_root / "bin" / self.os_name / self.arch / f"{tool_name}{bin_ext}"
+        local_path = self.bin_root / self.os_name / self.arch / f"{tool_name}{bin_ext}"
         
         if local_path.exists():
             logger.debug(f"Resolved {tool_name} to local path: {local_path}")

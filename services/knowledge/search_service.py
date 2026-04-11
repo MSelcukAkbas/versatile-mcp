@@ -1,5 +1,5 @@
 from ddgs import DDGS
-from services.logger_service import setup_logger
+from services.core.logger_service import setup_logger
 from typing import List, Dict
 
 logger = setup_logger("SearchService")

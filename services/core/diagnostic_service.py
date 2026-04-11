@@ -1,7 +1,7 @@
 import asyncio
 import time
 from typing import Dict, Any, List, Optional
-from services.logger_service import setup_logger
+from services.core.logger_service import setup_logger
 
 logger = setup_logger("DiagnosticService")
 

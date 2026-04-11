@@ -3,7 +3,7 @@ import json
 import logging
 from typing import List, Dict, Optional
 from bs4 import BeautifulSoup
-from services.logger_service import setup_logger
+from services.core.logger_service import setup_logger
 
 logger = setup_logger("StackOverflowService")
 

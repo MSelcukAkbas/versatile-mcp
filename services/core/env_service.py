@@ -3,7 +3,7 @@ import sys
 import subprocess
 import socket
 from importlib.metadata import version, PackageNotFoundError
-from services.logger_service import setup_logger
+from services.core.logger_service import setup_logger
 
 logger = setup_logger("EnvService")
 

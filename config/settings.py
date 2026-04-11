@@ -21,10 +21,16 @@ PROJECT_ROOT = os.getenv("PROJECT_ROOT", get_default_root())
 GLOBAL_DATA_DIR = os.getenv("MCP_MASTER_DATA_DIR", os.path.join(os.path.expanduser("~"), ".mcp-master"))
 
 def get_project_id(path: str) -> str:
-    """Generate a slug-based unique ID for the current project."""
-    abs_path = os.path.abspath(path)
+    """Generate a slug-based unique ID for the current project.
+    Uses pathlib for cross-platform and case-sensitivity normalization.
+    """
+    try:
+        abs_path = str(pathlib.Path(path).resolve())
+    except:
+        abs_path = os.path.abspath(path)
+        
     folder_name = os.path.basename(abs_path) or "root"
-    path_hash = hashlib.md5(abs_path.encode()).hexdigest()[:8]
+    path_hash = hashlib.md5(abs_path.lower().encode()).hexdigest()[:8]
     return f"{folder_name}-{path_hash}"
 
 PROJECT_ID = get_project_id(PROJECT_ROOT)
@@ -43,19 +49,36 @@ if extra_roots:
     ALLOWED_ROOTS.extend([str(pathlib.Path(p.strip()).resolve()) for p in extra_roots.split(",")])
 
 # --- Data & Service Paths ---
-PATHS: Dict[str, str] = {
-    "SERVER_HOME": SERVER_HOME,
-    "PROJECT_ROOT": PROJECT_ROOT,
-    "GLOBAL_DATA": GLOBAL_DATA_DIR,
-    "LOCAL_DATA": LOCAL_DATA_DIR,
-    "prompts": os.path.join(SERVER_HOME, "prompts"),
-    "local_memory": os.path.join(LOCAL_DATA_DIR, "memory"),
-    "global_memory": os.path.join(GLOBAL_DATA_DIR, "global", "memory"),
-    "memory": os.path.join(LOCAL_DATA_DIR, "memory"), # Backward compatibility alias
-    "tasks": os.path.join(LOCAL_DATA_DIR, "tasks.json"),
-    "audit_logs": os.path.join(LOCAL_DATA_DIR, "audit_logs"),
-    "requirements": os.path.join(SERVER_HOME, "requirements.txt"),
-}
+def build_paths(project_root: str, project_id: str) -> Dict[str, str]:
+    """Build PATHS dict for a given project."""
+    local_data_dir = os.path.join(GLOBAL_DATA_DIR, "projects", project_id)
+    return {
+        "SERVER_HOME": SERVER_HOME,
+        "PROJECT_ROOT": project_root,
+        "GLOBAL_DATA": GLOBAL_DATA_DIR,
+        "LOCAL_DATA": local_data_dir,
+        "prompts": os.path.join(SERVER_HOME, "prompts"),
+        "local_memory": os.path.join(local_data_dir, "memory"),
+        "global_memory": os.path.join(GLOBAL_DATA_DIR, "global", "memory"),
+        "memory": os.path.join(local_data_dir, "memory"),
+        "tasks": os.path.join(local_data_dir, "tasks.json"),
+        "audit_logs": os.path.join(GLOBAL_DATA_DIR, "global", "audit_logs"),  # Global, not per-project
+        "requirements": os.path.join(SERVER_HOME, "requirements.txt"),
+        "models": os.path.join(SERVER_HOME, "models"),
+        "embedding_model": os.path.join(SERVER_HOME, "models", "paraphrase-multilingual-MiniLM-L12-118M-v2-Q8_0.gguf"),
+    }
+
+PATHS: Dict[str, str] = build_paths(PROJECT_ROOT, PROJECT_ID)
+
+def resolve_paths(project_root: str | None = None) -> Dict[str, str]:
+    """
+    Get paths for a specific project_root.
+    If project_root is None, returns the current PATHS (initial PROJECT_ROOT).
+    """
+    if not project_root:
+        return PATHS
+    project_id = get_project_id(project_root)
+    return build_paths(project_root, project_id)
 
 # --- Service Settings ---
 OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://localhost:11434")
@@ -63,12 +86,14 @@ DEFAULT_MODEL = os.getenv("DEFAULT_MODEL", "qwen2.5-coder:7b-instruct-q4_K_M")
 STACK_EXCHANGE_API_KEY = os.getenv("STACK_EXCHANGE_API_KEY")
 
 # --- Directory Initialization ---
-def ensure_directories():
+def ensure_directories(paths: Dict[str, str] | None = None):
     """Ensure that all necessary data directories exist."""
+    if paths is None:
+        paths = PATHS
     required_dirs = [
-        PATHS["local_memory"],
-        PATHS["global_memory"],
-        PATHS["audit_logs"]
+        paths["local_memory"],
+        paths["global_memory"],
+        paths["audit_logs"]
     ]
     for d in required_dirs:
         os.makedirs(d, exist_ok=True)

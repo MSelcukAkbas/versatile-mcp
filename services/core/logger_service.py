@@ -14,7 +14,8 @@ def setup_logger(name: str, log_file: str = "app.log") -> logging.Logger:
     - encoding='utf-8', errors='replace': prevents encoding crashes.
     """
     if not os.path.isabs(log_file):
-        base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        # Go 3 levels up: services/core/logger_service.py -> services/core -> services -> [Root]
+        base_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
         log_file = os.path.join(base_path, log_file)
 
     logger = logging.getLogger(name)

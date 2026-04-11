@@ -1,5 +1,5 @@
 import ollama
-from services.logger_service import setup_logger
+from services.core.logger_service import setup_logger
 from typing import List, Dict, Any, Optional
 
 logger = setup_logger("OllamaService")

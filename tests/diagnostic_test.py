@@ -7,9 +7,9 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).parent.parent
 sys.path.append(str(PROJECT_ROOT))
 
-from services.ollama_service import OllamaService
-from services.bin_service import BinService
-from services.diagnostic_service import DiagnosticService
+from services.ai.ollama_service import OllamaService
+from services.core.bin_service import BinService
+from services.core.diagnostic_service import DiagnosticService
 
 async def test_diagnostics():
     print("--- Diagnostic Service Test (Simulation Mode) ---")

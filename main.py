@@ -11,21 +11,30 @@ if sys.platform == "win32":
     sys.stderr.reconfigure(encoding='utf-8')
 
 # 2. Service Imports
-from services.env_service import EnvService
-from services.bin_service import BinService
-from services.ollama_service import OllamaService
-from services.diagnostic_service import DiagnosticService
-from services.file_service import FileService
-from services.prompt_service import PromptService
-from services.search_service import SearchService
-from services.stackoverflow_service import StackOverflowService
-from services.planner_service import PlannerService
-from services.validation_service import ValidationService
-from services.thinking_service import ThinkingService
-from services.memory_service import MemoryService
-from services.task_service import TaskService
-from services.audit_service import AuditService, AuditMiddleware
-from services.logger_service import setup_logger, log_startup_banner
+# Core
+from services.core.env_service import EnvService
+from services.core.bin_service import BinService
+from services.core.diagnostic_service import DiagnosticService
+from services.core.file_service import FileService
+from services.core.validation_service import ValidationService
+from services.core.audit_service import AuditService, AuditMiddleware
+from services.core.logger_service import setup_logger, log_startup_banner
+
+# AI
+from services.ai.ollama_service import OllamaService
+from services.ai.prompt_service import PromptService
+from services.ai.thinking_service import ThinkingService
+from services.ai.llama_service import LlamaService
+
+# Knowledge
+from services.knowledge.document_service import DocumentService
+from services.knowledge.search_service import SearchService
+from services.knowledge.stackoverflow_service import StackOverflowService
+from services.knowledge.memory_service import MemoryService
+
+# Orchestration
+from services.orchestration.planner_service import PlannerService
+from services.orchestration.task_service import TaskService
 
 # 3. Tool Registration
 from tools import register_all_tools
@@ -48,10 +57,14 @@ def bootstrap():
     logger.info("Bootstrap | Initializing services...")
     bin_svc = BinService(PATHS["PROJECT_ROOT"])
     ollama_svc = OllamaService(host=OLLAMA_HOST)
+    llama_svc = LlamaService(model_path=PATHS["embedding_model"])
+    doc_svc = DocumentService()
     
     services = {
         "file": FileService(ALLOWED_ROOTS),
         "ollama": ollama_svc,
+        "llama": llama_svc,
+        "doc": doc_svc,
         "bin": bin_svc,
         "diag": DiagnosticService(ollama_svc, bin_svc),
         "prompt": PromptService(PATHS["prompts"]),
@@ -60,7 +73,7 @@ def bootstrap():
         "planner": PlannerService(),
         "validator": ValidationService(),
         "thinking": ThinkingService(),
-        "memory": MemoryService(PATHS["local_memory"], PATHS["global_memory"]),
+        "memory": MemoryService(PATHS["local_memory"], PATHS["global_memory"], llama_svc),
         "task": TaskService(PATHS["tasks"]),
         "audit": AuditService(PATHS["audit_logs"]),
         "logger": logger

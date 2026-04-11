@@ -1,7 +1,7 @@
 from typing import Optional
 from fastmcp import FastMCP
 
-def register_reasoning_tools(mcp: FastMCP, thinking_svc):
+def register_reasoning_tools(mcp: FastMCP, thinking_svc, diag_svc):
     @mcp.tool()
     async def sequentialthinking(
         thought: str,
@@ -45,6 +45,9 @@ def register_reasoning_tools(mcp: FastMCP, thinking_svc):
         Only set next_thought_needed to false when truly done and a satisfactory
         answer has been reached.
         """
+        err = await diag_svc.check_tool_dependency("sequentialthinking")
+        if err: return err
+
         import json
         result = thinking_svc.add_thought(
             thought=thought,
@@ -62,5 +65,8 @@ def register_reasoning_tools(mcp: FastMCP, thinking_svc):
     @mcp.tool()
     async def clear_thinking() -> str:
         """Clear the current sequential thinking session. Call when starting a new reasoning chain."""
+        err = await diag_svc.check_tool_dependency("clear_thinking")
+        if err: return err
+
         thinking_svc.clear_history()
         return "Thinking session cleared."

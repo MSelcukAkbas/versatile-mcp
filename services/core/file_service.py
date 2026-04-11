@@ -4,8 +4,8 @@ import time
 import json
 import pathlib
 import subprocess
-from services.logger_service import setup_logger
-from services.bin_service import BinService
+from services.core.logger_service import setup_logger
+from services.core.bin_service import BinService
 from typing import List, Optional, Dict, Any
 
 logger = setup_logger("FileService")

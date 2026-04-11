@@ -45,3 +45,6 @@ test_*.py
 # OS
 .DS_Store
 Thumbs.db
+
+# Models
+models/*.gguf

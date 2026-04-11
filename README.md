@@ -56,7 +56,7 @@ When combined with a local **Ollama** instance, **Versatile-MCP** unlocks advanc
 git clone https://github.com/MSelcukAkbas/versatile-mcp.git
 cd versatile-mcp
 
-# Install base dependencies
+# Install dependencies
 pip install -r requirements.txt
 
 # Run health check (Verifies bundled binaries)

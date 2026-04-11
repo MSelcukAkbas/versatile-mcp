@@ -14,6 +14,7 @@ def register_task_tools(mcp: FastMCP, task_svc, planner_svc, diag_svc):
         risk_assessment: Optional[List[str]] = None,
         context: Optional[str] = None,
         constraints: Optional[List[str]] = None,
+        project_root: Optional[str] = None,
     ) -> str:
         """
         Analyze a problem and produce a structured execution plan before making changes.
@@ -40,6 +41,9 @@ def register_task_tools(mcp: FastMCP, task_svc, planner_svc, diag_svc):
 
         Returns: A task_id string you can use with task_mark_step to track progress.
         """
+        err = await diag_svc.check_tool_dependency("create_plan")
+        if err: return err
+
         try:
             # Validate + structure via PlannerService (no LLM, pure logic)
             ok, msg, structured = planner_svc.structure_plan(
@@ -62,6 +66,7 @@ def register_task_tools(mcp: FastMCP, task_svc, planner_svc, diag_svc):
                 problem_analysis=structured["problem_analysis"],
                 best_practices=structured["best_practices"],
                 risk_assessment=structured["risk_assessment"],
+                project_root=project_root,
             )
 
             summary = {
@@ -77,21 +82,27 @@ def register_task_tools(mcp: FastMCP, task_svc, planner_svc, diag_svc):
             return f"ERROR: {str(e)}"
 
     @mcp.tool()
-    async def task_mark_step(task_id: str, step_index: int, status: str) -> str:
+    async def task_mark_step(task_id: str, step_index: int, status: str, project_root: Optional[str] = None) -> str:
         """
         Mark a specific step of a plan as 'todo', 'in_progress', or 'done'.
         Call this after completing each step so progress is tracked.
         """
+        err = await diag_svc.check_tool_dependency("task_mark_step")
+        if err: return err
+
         try:
-            return task_svc.mark_step(task_id, step_index, status)
+            return task_svc.mark_step(task_id, step_index, status, project_root=project_root)
         except Exception as e:
             return str(e)
 
     @mcp.tool()
-    async def task_get_active() -> str:
+    async def task_get_active(project_root: Optional[str] = None) -> str:
         """Retrieve all active, non-completed plans and their steps."""
+        err = await diag_svc.check_tool_dependency("task_get_active")
+        if err: return err
+
         try:
-            active = task_svc.get_active_tasks()
+            active = task_svc.get_active_tasks(project_root=project_root)
             return json.dumps(active, indent=2, ensure_ascii=False) if active else "No active tasks. You are free!"
         except Exception as e:
             return str(e)

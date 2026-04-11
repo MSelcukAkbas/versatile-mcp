@@ -6,9 +6,9 @@ import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from config.settings import PATHS, ensure_directories
-from services.file_service import FileService
-from services.planner_service import PlannerService
-from services.validation_service import ValidationService
+from services.core.file_service import FileService
+from services.orchestration.planner_service import PlannerService
+from services.core.validation_service import ValidationService
 
 async def main():
     print("Starting Master MCP Smoke Test (Modular Architecture)...\n")

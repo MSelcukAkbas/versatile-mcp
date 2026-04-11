@@ -4,13 +4,13 @@ import time
 from datetime import datetime, timezone
 from typing import Any
 from fastmcp.server.middleware import Middleware, MiddlewareContext
-from services.logger_service import setup_logger
+from services.core.logger_service import setup_logger
 
 logger = setup_logger("AuditService")
 
 # Max characters to store per input/output field.
 # Prevents huge outputs (e.g. workspace indexing) from bloating log files.
-MAX_FIELD_CHARS = 8_000
+MAX_FIELD_CHARS = 32_000
 
 
 def _safe_serialize(value: Any, label: str = "value") -> str:
@@ -65,6 +65,11 @@ class AuditService:
     ):
         """Append one audit record as a JSON line."""
         try:
+            # Extract project_root from arguments if present
+            project_root = None
+            if isinstance(arguments, dict):
+                project_root = arguments.get("project_root")
+
             record = {
                 "ts": datetime.now(timezone.utc).isoformat(),
                 "tool": tool_name,
@@ -73,14 +78,26 @@ class AuditService:
                 "input": _safe_serialize(arguments, label="input"),
                 "output": _safe_serialize(result, label="output"),
             }
+            if project_root:
+                record["project_root"] = project_root
             if error:
                 record["error"] = error[:2000]  # cap error messages too
 
             line = json.dumps(record, ensure_ascii=False) + "\n"
 
             filepath = self._get_log_path()
-            with open(filepath, "a", encoding="utf-8", errors="replace") as f:
-                f.write(line)
+            if not os.path.exists(self.log_dir):
+                try:
+                    os.makedirs(self.log_dir, exist_ok=True)
+                except:
+                    pass # Silently fail if we can't create dir, avoid crashing the app
+                
+            try:
+                with open(filepath, "a", encoding="utf-8", errors="replace") as f:
+                    f.write(line)
+            except Exception as e:
+                # We don't use the regular logger here to avoid recursion if logger uses audit
+                print(f"AuditService failed to write log entry: {e}")
 
         except Exception as e:
             # Logging must NEVER crash the server — silent fallback

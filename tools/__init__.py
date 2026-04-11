@@ -5,6 +5,7 @@ from .file_ops import register_file_tools
 from .memory import register_memory_tools
 from .task_management import register_task_tools
 from .diagnostics import register_diagnostic_tools
+from .rich_docs import register_rich_doc_tools
 
 def register_all_tools(mcp, services, paths):
     diag_svc = services['diag']
@@ -20,10 +21,12 @@ def register_all_tools(mcp, services, paths):
         mcp, 
         services['memory'], 
         services['task'], 
+        services['doc'],
         paths['PROJECT_ROOT'], 
         services['logger'],
         diag_svc
     )
+    register_rich_doc_tools(mcp, services['doc'], services['logger'])
     register_task_tools(mcp, services['task'], services['planner'], diag_svc)
     register_diagnostic_tools(
         mcp, 
