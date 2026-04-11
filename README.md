@@ -22,7 +22,7 @@ The heart of **Versatile-MCP** is its local operational layer. These features do
 
 | Feature Category | Tool Examples | Status (Native Core) | status (Ollama Req) |
 | :--- | :--- | :--- | :--- |
-| **Memory / RAG** | `memory_search_semantic`, `memory_index_workspace` | ✅ **Active (Native)** | ⚡ Enhanced |
+| **Memory / RAG** | `memory_search_semantic`, `memory_index_workspace` | ✅ **Active (Native)** | - |
 | **Research** | `web_search`, `search_stackoverflow` | ✅ **Active** | - |
 | **File Ops** | `search_content`, `read_file`, `edit_file` | ✅ **Active** | - |
 | **Validation** | `validate_syntax` (Python, JS, TS) | ✅ **Active** | - |
