@@ -1,5 +1,9 @@
 import os
 import sys
+
+# Ensure the project root is in sys.path for internal imports
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
 from fastmcp import FastMCP
 
 # 1. Configuration & Paths
@@ -31,6 +35,8 @@ from services.knowledge.document_service import DocumentService
 from services.knowledge.search_service import SearchService
 from services.knowledge.stackoverflow_service import StackOverflowService
 from services.knowledge.memory_service import MemoryService
+from services.knowledge.github_service import GitHubService
+
 
 # Orchestration
 from services.orchestration.planner_service import PlannerService
@@ -60,13 +66,15 @@ def bootstrap():
     llama_svc = LlamaService(model_path=PATHS["embedding_model"])
     doc_svc = DocumentService()
     
+    github_svc = GitHubService(logger)
+    
     services = {
         "file": FileService(ALLOWED_ROOTS),
         "ollama": ollama_svc,
         "llama": llama_svc,
         "doc": doc_svc,
         "bin": bin_svc,
-        "diag": DiagnosticService(ollama_svc, bin_svc),
+        "diag": DiagnosticService(ollama_svc, bin_svc, github_svc),
         "prompt": PromptService(PATHS["prompts"]),
         "search": SearchService(),
         "stackoverflow": StackOverflowService(api_key=os.getenv("STACK_EXCHANGE_API_KEY")),
@@ -76,6 +84,7 @@ def bootstrap():
         "memory": MemoryService(PATHS["local_memory"], PATHS["global_memory"], llama_svc),
         "task": TaskService(PATHS["tasks"]),
         "audit": AuditService(PATHS["audit_logs"]),
+        "github": github_svc,
         "logger": logger
     }
     logger.info(f"Bootstrap | {len(services)} services initialized.")
@@ -98,7 +107,7 @@ if __name__ == "__main__":
     host = os.getenv("MCP_HOST", "127.0.0.1")
     port = int(os.getenv("MCP_PORT", "8000"))
 
-    app_logger.info(f"Master MCP Server starting (transport={transport}, host={host}, port={port})...")
+    app_logger.info(f"Master MCP Server starting (transport={transport}, host={host}, port={port})...)")
     
     if transport == "stdio":
         mcp_app.run()
