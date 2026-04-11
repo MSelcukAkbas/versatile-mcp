@@ -35,7 +35,11 @@ from services.knowledge.document_service import DocumentService
 from services.knowledge.search_service import SearchService
 from services.knowledge.stackoverflow_service import StackOverflowService
 from services.knowledge.memory_service import MemoryService
+<<<<<<< HEAD
 from services.knowledge.git_service import GitService
+=======
+from services.knowledge.github_service import GitHubService
+>>>>>>> 6018f667c25b3f3db7fdd2593e7e548fc6bcaffc
 
 
 # Orchestration
@@ -66,7 +70,11 @@ def bootstrap():
     llama_svc = LlamaService(model_path=PATHS["embedding_model"])
     doc_svc = DocumentService()
     
+<<<<<<< HEAD
     git_svc = GitService(logger, bin_svc)
+=======
+    github_svc = GitHubService(logger)
+>>>>>>> 6018f667c25b3f3db7fdd2593e7e548fc6bcaffc
     
     services = {
         "file": FileService(ALLOWED_ROOTS),
@@ -74,7 +82,11 @@ def bootstrap():
         "llama": llama_svc,
         "doc": doc_svc,
         "bin": bin_svc,
+<<<<<<< HEAD
         "diag": DiagnosticService(ollama_svc, bin_svc, git_svc),
+=======
+        "diag": DiagnosticService(ollama_svc, bin_svc, github_svc),
+>>>>>>> 6018f667c25b3f3db7fdd2593e7e548fc6bcaffc
         "prompt": PromptService(PATHS["prompts"]),
         "search": SearchService(),
         "stackoverflow": StackOverflowService(api_key=os.getenv("STACK_EXCHANGE_API_KEY")),
@@ -84,7 +96,11 @@ def bootstrap():
         "memory": MemoryService(PATHS["local_memory"], PATHS["global_memory"], llama_svc),
         "task": TaskService(PATHS["tasks"]),
         "audit": AuditService(PATHS["audit_logs"]),
+<<<<<<< HEAD
         "git": git_svc,
+=======
+        "github": github_svc,
+>>>>>>> 6018f667c25b3f3db7fdd2593e7e548fc6bcaffc
         "logger": logger
     }
     logger.info(f"Bootstrap | {len(services)} services initialized.")
@@ -107,7 +123,7 @@ if __name__ == "__main__":
     host = os.getenv("MCP_HOST", "127.0.0.1")
     port = int(os.getenv("MCP_PORT", "8000"))
 
-    app_logger.info(f"Master MCP Server starting (transport={transport}, host={host}, port={port})...")
+    app_logger.info(f"Master MCP Server starting (transport={transport}, host={host}, port={port})...)")
     
     if transport == "stdio":
         mcp_app.run()
