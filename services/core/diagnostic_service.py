@@ -8,9 +8,10 @@ logger = setup_logger("DiagnosticService")
 class DiagnosticService:
     """Consolidated health monitoring for all Master MCP dependencies."""
     
-    def __init__(self, ollama_svc, bin_svc):
+    def __init__(self, ollama_svc, bin_svc, github_svc=None):
         self.ollama = ollama_svc
         self.bin = bin_svc
+        self.github = github_svc
         
         # Cache management
         self._last_check_time = 0
@@ -50,6 +51,11 @@ class DiagnosticService:
             if comp in bin_results:
                 bin_results[comp] = False
 
+        # Git Check
+        git_status = {"status": "Offline", "details": "Git binary not found"}
+        if self.bin.is_tool_available("git"):
+            git_status = {"status": "Online", "details": "Git CLI available"}
+
         self._health_cache = {
             "timestamp": now,
             "components": {
@@ -60,7 +66,8 @@ class DiagnosticService:
                 "binaries": {
                     "status": "Online" if all(bin_results.values()) else "Degraded",
                     "details": bin_results
-                }
+                },
+                "git": git_status
             }
         }
         
@@ -80,11 +87,12 @@ class DiagnosticService:
             if components["ollama"]["status"] != "Online":
                 return "The local Ollama service is unreachable. Please ensure Ollama is running on your machine."
         
-        # Memory tools dependency
-        if tool_name in ["memory_store_fact", "memory_search_semantic"]:
-            if components["ollama"]["status"] != "Online":
-                return "Wait! Ollama is offline. Facts can be saved but semantic search/indexing won't work."
-        
+        # Git tools dependency
+        git_tools = ["git_push", "git_pull", "git_diff", "git_status"]
+        if tool_name in git_tools:
+            if components["git"]["status"] != "Online":
+                return "Git binary is not found on this system. Please install Git to use these tools."
+
         # File tools dependency (specific binaries)
         bin_details = components["binaries"]["details"]
         mapping = {

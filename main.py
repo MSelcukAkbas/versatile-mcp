@@ -1,5 +1,9 @@
 import os
 import sys
+
+# Ensure the project root is in sys.path for internal imports
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
 from fastmcp import FastMCP
 
 # 1. Configuration & Paths
@@ -31,6 +35,8 @@ from services.knowledge.document_service import DocumentService
 from services.knowledge.search_service import SearchService
 from services.knowledge.stackoverflow_service import StackOverflowService
 from services.knowledge.memory_service import MemoryService
+from services.knowledge.git_service import GitService
+
 
 # Orchestration
 from services.orchestration.planner_service import PlannerService
@@ -60,13 +66,15 @@ def bootstrap():
     llama_svc = LlamaService(model_path=PATHS["embedding_model"])
     doc_svc = DocumentService()
     
+    git_svc = GitService(logger, bin_svc)
+    
     services = {
         "file": FileService(ALLOWED_ROOTS),
         "ollama": ollama_svc,
         "llama": llama_svc,
         "doc": doc_svc,
         "bin": bin_svc,
-        "diag": DiagnosticService(ollama_svc, bin_svc),
+        "diag": DiagnosticService(ollama_svc, bin_svc, git_svc),
         "prompt": PromptService(PATHS["prompts"]),
         "search": SearchService(),
         "stackoverflow": StackOverflowService(api_key=os.getenv("STACK_EXCHANGE_API_KEY")),
@@ -76,6 +84,7 @@ def bootstrap():
         "memory": MemoryService(PATHS["local_memory"], PATHS["global_memory"], llama_svc),
         "task": TaskService(PATHS["tasks"]),
         "audit": AuditService(PATHS["audit_logs"]),
+        "git": git_svc,
         "logger": logger
     }
     logger.info(f"Bootstrap | {len(services)} services initialized.")

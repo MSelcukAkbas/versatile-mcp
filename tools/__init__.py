@@ -6,6 +6,8 @@ from .memory import register_memory_tools
 from .task_management import register_task_tools
 from .diagnostics import register_diagnostic_tools
 from .rich_docs import register_rich_doc_tools
+from .git_tools import register_git_tools
+
 
 def register_all_tools(mcp, services, paths):
     diag_svc = services['diag']
@@ -36,3 +38,5 @@ def register_all_tools(mcp, services, paths):
         paths['PROJECT_ROOT'], 
         paths['SERVER_HOME']
     )
+    register_git_tools(mcp, services['git'], diag_svc)
+
