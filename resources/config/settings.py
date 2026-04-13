@@ -1,6 +1,7 @@
 import os
 import pathlib
 import hashlib
+import json
 from typing import Dict, List, Optional
 
 # --- Core Paths ---
@@ -95,6 +96,62 @@ def get_project_id(path: str) -> str:
 PROJECT_ID = get_project_id(PROJECT_ROOT)
 LOCAL_DATA_DIR = os.path.join(GLOBAL_DATA_DIR, "projects", PROJECT_ID)
 
+# --- Centralized Projects Registry ---
+PROJECT_REGISTRY_FILE = os.path.join(GLOBAL_DATA_DIR, "projects", "memory.json")
+
+def load_project_registry() -> List[Dict[str, str]]:
+    """Load the list of all indexed projects."""
+    if not os.path.exists(PROJECT_REGISTRY_FILE):
+        return []
+    try:
+        with open(PROJECT_REGISTRY_FILE, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+            return data.get("projects", [])
+    except Exception:
+        return []
+
+def save_to_registry(project_root: str, project_id: str):
+    """Register or update a project in the central memory.json."""
+    registry = load_project_registry()
+    abs_path = str(pathlib.Path(project_root).resolve())
+    
+    # Update if exists, or append
+    updated = False
+    for p in registry:
+        if p["path"].lower() == abs_path.lower():
+            p["id"] = project_id
+            updated = True
+            break
+            
+    if not updated:
+        registry.append({"path": abs_path, "id": project_id})
+        
+    os.makedirs(os.path.dirname(PROJECT_REGISTRY_FILE), exist_ok=True)
+    with open(PROJECT_REGISTRY_FILE, 'w', encoding='utf-8') as f:
+        json.dump({"projects": registry}, f, indent=2)
+
+def resolve_best_project_context(target_path: str) -> Optional[Dict[str, str]]:
+    """
+    Find the best matching indexed project for a given path.
+    Checks for exact match first, then checks parents.
+    """
+    registry = load_project_registry()
+    target_abs = str(pathlib.Path(target_path).resolve()).lower()
+    
+    best_match = None
+    max_len = -1
+    
+    for p in registry:
+        p_path = p["path"].lower()
+        # Check if target_abs is p_path or a sub-path of p_path
+        if target_abs == p_path or target_abs.startswith(p_path + os.sep):
+            # We want the 'longest' path that matches (deepest root)
+            if len(p_path) > max_len:
+                max_len = len(p_path)
+                best_match = p
+                
+    return best_match
+
 # --- Access Control ---
 ALLOWED_ROOTS: List[str] = [
     str(pathlib.Path(PROJECT_ROOT).resolve()),
@@ -159,3 +216,9 @@ def ensure_directories(paths: Dict[str, str] | None = None):
     ]
     for d in required_dirs:
         os.makedirs(d, exist_ok=True)
+    
+    # Initialize projects registry if missing
+    if not os.path.exists(PROJECT_REGISTRY_FILE):
+        os.makedirs(os.path.dirname(PROJECT_REGISTRY_FILE), exist_ok=True)
+        with open(PROJECT_REGISTRY_FILE, 'w', encoding='utf-8') as f:
+            json.dump({"projects": []}, f, indent=2)

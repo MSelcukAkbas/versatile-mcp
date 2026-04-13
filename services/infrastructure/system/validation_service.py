@@ -17,7 +17,8 @@ class ValidationService:
     """Service to validate syntax of various file formats using high-performance tools."""
     
     def __init__(self):
-        self.project_root = Path(__file__).parent.parent
+        # Go up 3 levels from services/infrastructure/system/
+        self.project_root = Path(__file__).parents[3].resolve()
         self.bin_service = BinService(self.project_root)
         logger.info("ValidationService initialized with BinService.")
 

@@ -19,16 +19,18 @@ class WorkspaceIndexer:
         indexed, deleted, skipped = 0, 0, 0
         text_exts = {'.py', '.md', '.txt', '.json', '.yaml', '.js', '.ts', '.html', '.css'}
         
+        # Determine the correct semantic engine for THIS project root
+        semantic_engine = self.knowledge.get_semantic_engine(project_root)
+        
         # 0. Cleanup Stale Entries (Phase 0)
-        indexed_paths = self.knowledge.semantic.get_indexed_paths()
-        logger.info(f"Cleanup | Found {len(indexed_paths)} total entries in semantic memory.")
+        indexed_paths = semantic_engine.get_indexed_paths()
+        logger.info(f"Cleanup | Found {len(indexed_paths)} total entries in semantic memory for {project_root}.")
         for rel_path in indexed_paths:
             full_path = os.path.normpath(os.path.join(project_root, rel_path))
             exists = os.path.exists(full_path)
-            # logger.debug(f"Cleanup | Checking if {rel_path} exists at {full_path} -> {exists}")
             if not exists:
                 logger.info(f"Cleanup | Removing stale entry: {rel_path}")
-                await self.knowledge.semantic.delete_by_path(rel_path)
+                await semantic_engine.delete_by_path(rel_path)
                 deleted += 1
 
         # 1. Gather files
@@ -55,7 +57,7 @@ class WorkspaceIndexer:
                         content = f.read()
                     
                     # Modular indexing call
-                    await self.knowledge.semantic.index(content, {"path": rel_path}, rel_path)
+                    await semantic_engine.index(content, {"path": rel_path}, rel_path)
                     indexed += 1
                 else:
                     skipped += 1
