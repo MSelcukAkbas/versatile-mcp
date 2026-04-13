@@ -23,7 +23,19 @@ class DiagnosticService:
         if not force_refresh and (now - self._last_check_time < self._cache_duration):
             return self._health_cache
 
-        ollama_ok = await self.ollama.is_ready() if "ollama" not in self._simulated_failures else False
+        # Safe check for is_ready whether it's a method or attribute
+        ollama_ok = True
+        if hasattr(self.ollama, "is_ready"):
+            if callable(self.ollama.is_ready):
+                try:
+                    ollama_ok = await self.ollama.is_ready()
+                except:
+                    ollama_ok = False # Method failed
+            else:
+                ollama_ok = bool(self.ollama.is_ready)
+        
+        if "ollama" in self._simulated_failures:
+            ollama_ok = False
         bin_results = self.bin.check_all_bins()
         
         self._health_cache = {

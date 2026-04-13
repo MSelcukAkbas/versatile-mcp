@@ -24,43 +24,47 @@ def register_research_tools(mcp: FastMCP, search_svc, validator_svc, stackoverfl
 
     @mcp.tool()
     async def web_search(query: str, max_results: int = 5) -> str:
-        """Search the web for up-to-date information."""
-        err = await diag_svc.check_tool_dependency("web_search")
-        if err: return err
-
-        results = await search_svc.search(query, max_results)
-        if not results:
-            return "No results found."
-        return "\n".join(
-            [f"### {r.get('title')}\nURL: {r.get('href')}\n{r.get('body')}\n" for r in results]
-        )
-
-    @mcp.tool()
-    async def search_stackoverflow(query: str, max_results: int = 3) -> str:
-        """Search Stack Overflow for technical questions and accepted answers."""
-        err = await diag_svc.check_tool_dependency("search_stackoverflow")
-        if err: return err
-
-        results = await stackoverflow_svc.search(query, max_results)
-        if not results:
-            return "No Stack Overflow results found."
+        """
+        Hybrid Technical Research Tool. 
+        Simultaneously searches the general web and Stack Overflow for comprehensive answers.
+        """
+        import asyncio
+        
+        # Parallel execution for speed
+        tasks = [
+            search_svc.search(query, max_results),
+            stackoverflow_svc.search(query, max_results)
+        ]
+        
+        # Check dependencies first (informal)
+        err_web = await diag_svc.check_tool_dependency("web_search")
+        err_so = await diag_svc.check_tool_dependency("search_stackoverflow")
+        
+        web_results, so_results = await asyncio.gather(*tasks)
         
         output = []
-        for r in results:
-            if "error" in r:
-                output.append(f"Error: {r['error']}")
-                continue
-                
-            entry = [
-                f"## {r['title']}",
-                f"URL: {r['link']}",
-                f"### Question\n{r['question_body']}",
-                f"### Best Answer (Accepted)\n{r['answer_body']}",
-                "---"
-            ]
-            output.append("\n".join(entry))
+        
+        # 1. Format Stack Overflow (Technical Priority)
+        if so_results and not isinstance(so_results, str):
+            output.append("# 📚 STACK OVERFLOW ÇÖZÜMLERİ\n")
+            for r in so_results:
+                if "error" in r: continue
+                output.append(f"## {r['title']}\nURL: {r['link']}\n### Answer Snippet\n{r.get('answer_body', 'No snippet available.')[:500]}...\n---\n")
+        elif isinstance(so_results, str):
+            output.append(f"StackOverflow Note: {so_results}")
+
+        # 2. Format Web Results
+        if web_results and not isinstance(web_results, str):
+            output.append("\n# 🌐 WEB KAYNAKLARI (Dokümantasyon & Rehberler)\n")
+            for r in web_results:
+                output.append(f"### {r.get('title')}\nURL: {r.get('href')}\n{r.get('body')}\n")
+        elif isinstance(web_results, str):
+            output.append(f"Web Note: {web_results}")
+
+        if not output:
+            return "Hiçbir sonuç bulunamadı."
             
-        return "\n\n".join(output)
+        return "\n".join(output)
 
     # --- Feature: Local HTTP Client ---
 

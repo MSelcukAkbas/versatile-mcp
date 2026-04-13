@@ -49,17 +49,7 @@ def register_file_tools(mcp: FastMCP, file_svc, diag_svc, doc_svc=None):
         try: return file_svc.multi_edit_file(file_path, chunks)
         except Exception as e: return str(e)
 
-    @mcp.tool()
-    async def create_directory(directory: str) -> str:
-        """Create a new directory."""
-        try: return file_svc.create_directory(directory)
-        except Exception as e: return str(e)
 
-    @mcp.tool()
-    async def list_directory_with_sizes(directory: str = ".") -> str:
-        """List directory contents with file sizes."""
-        try: return json.dumps(file_svc.list_directory_with_sizes(directory), indent=2)
-        except Exception as e: return str(e)
 
     @mcp.tool()
     async def directory_tree(directory: str = ".", max_depth: int = 3) -> str:
@@ -70,11 +60,6 @@ def register_file_tools(mcp: FastMCP, file_svc, diag_svc, doc_svc=None):
         try: return file_svc.directory_tree(directory, max_depth)
         except Exception as e: return str(e)
 
-    @mcp.tool()
-    async def move_file(source_path: str, dest_path: str) -> str:
-        """Move or rename a file/directory."""
-        try: return file_svc.move_file(source_path, dest_path)
-        except Exception as e: return str(e)
 
     @mcp.tool()
     async def search_files(pattern: str, directory: str = ".") -> str:

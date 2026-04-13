@@ -17,7 +17,11 @@ def register_memory_tools(mcp: FastMCP, memory_svc, task_svc, doc_svc, PROJECT_R
 
     @mcp.tool()
     async def memory_index_workspace(project_root: str) -> str:
-        """Indexes the workspace for semantic search (Consolidated Service Call)."""
+        """
+        Indexes the workspace for semantic search (Consolidated Service Call).
+        
+        CRITICAL: This tool MUST be executed at the start of every project or session to enable semantic search and context retrieval.
+        """
         logger.info(f"Indexing workspace: {project_root}")
         # Initialize indexer if not already (bridge)
         if not memory_svc.indexer:

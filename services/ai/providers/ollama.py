@@ -9,6 +9,10 @@ class OllamaProvider:
     
     def __init__(self, host: str = "http://localhost:11434"):
         self.host = host
+        self._ready = True
+
+    async def is_ready(self) -> bool:
+        return self._ready
 
     async def generate_completion(self, model: str, prompt: str, system: str = "") -> str:
         url = f"{self.host}/api/generate"

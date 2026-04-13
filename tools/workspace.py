@@ -18,6 +18,8 @@ def register_workspace_tools(mcp: FastMCP, workspace_svc):
         Comprehensive workspace analyzer tool. 
         Extracts structure, technology, entrypoints, modules, and multi-factor hotspots.
         
+        CRITICAL: This tool MUST be executed at the start of every project or session to understand the architecture and project structure.
+
         Args:
             project_root: Path to investigate (defaults to allowed root).
             mode: 'fast' (metadata only) or 'deep' (AST analysis, imports, health scores).

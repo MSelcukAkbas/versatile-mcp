@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 
 # Proje kök dizinini sys.path'e ekle (main.py'den import yapabilmek için)
-PROJECT_ROOT = str(Path(__file__).parent.parent)
+PROJECT_ROOT = str(Path(__file__).parent.parent.parent)
 if PROJECT_ROOT not in sys.path:
     sys.path.append(PROJECT_ROOT)
 

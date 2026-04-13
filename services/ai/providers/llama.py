@@ -13,7 +13,10 @@ class LlamaProvider:
     def __init__(self, model_path: str):
         self.model_path = Path(model_path)
         self.client = None
-        self.is_ready = False
+        self._ready = False
+
+    async def is_ready(self) -> bool:
+        return self._ready
 
     def ensure_model(self):
         if self.model_path.exists():
@@ -32,10 +35,10 @@ class LlamaProvider:
             # If the model is corrupt or invalid, this is where it crashes usually.
             # We wrap it to allow the server to start anyway.
             self.client = Llama(model_path=str(self.model_path), embedding=True, verbose=False, n_ctx=384)
-            self.is_ready = True
+            self._ready = True
             logger.info("LlamaProvider initialized successfully.")
         except Exception as e:
-            self.is_ready = False
+            self._ready = False
             logger.error(f"Llama initialization deferred or failed: {e}")
             # Do NOT raise, just stay un-ready.
 
@@ -43,7 +46,7 @@ class LlamaProvider:
         if not self.client: 
             self.initialize()
         
-        if not self.is_ready:
+        if not self._ready:
             return [0.0] * 384 # Fallback zero vector if failed
             
         try:
