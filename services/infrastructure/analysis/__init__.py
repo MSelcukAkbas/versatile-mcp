@@ -11,6 +11,7 @@ class WorkspaceAnalyzerService:
     
     def __init__(self, project_root: str, ignore_svc: Optional[Any] = None):
         self.project_root = pathlib.Path(project_root).resolve()
+        self.ignore_svc = ignore_svc
         self.scanner = MetadataScanner(self.project_root, ignore_svc)
         self.grapher = DependencyGrapher(self.project_root)
         self.explorer = Explorer(str(self.project_root), ignore_svc)

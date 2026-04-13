@@ -2,7 +2,7 @@ import json
 import pathlib
 from typing import Optional, List
 from fastmcp import FastMCP
-from resources.config.settings import PROJECT_ROOT, PROJECT_ID
+from resources.config.settings import PROJECT_ROOT, PROJECT_ID, ALLOWED_ROOTS
 from services.infrastructure.analysis import WorkspaceAnalyzerService
 from services.infrastructure.system.ignore_service import IgnoreService
 

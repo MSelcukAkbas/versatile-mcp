@@ -17,6 +17,10 @@ class FileSystemService:
         self.patcher = Patcher()
         self.ignore_svc = ignore_svc
         
+        # Explorer integration
+        from services.infrastructure.analysis.explorer import Explorer
+        self.explorer = Explorer(str(self.security.allowed_roots[0]), ignore_svc)
+        
         # Search engine depends on BinService
         if bin_service:
             self.searcher = SearchEngine(bin_service, str(self.security.allowed_roots[0]))
@@ -24,9 +28,23 @@ class FileSystemService:
             self.searcher = None
 
     def read_file(self, file_path: str, start_line: Optional[int] = None, 
-                  end_line: Optional[int] = None, mode: str = "auto") -> str:
+                  end_line: Optional[int] = None, mode: str = "auto", doc_svc: Optional[Any] = None) -> str:
         resolved = self.security.resolve_path(file_path)
-        return self.reader.read(resolved, mode, start_line, end_line)
+        # Use provided doc_svc if available, else fallback to the one from __init__
+        reader = self.reader
+        if doc_svc:
+            from .reader import SmartReader
+            reader = SmartReader(doc_svc)
+        return reader.read(resolved, mode, start_line, end_line)
+
+    def read_multiple(self, file_paths: List[str]) -> Dict[str, str]:
+        results = {}
+        for path in file_paths:
+            try:
+                results[path] = self.read_file(path)
+            except Exception as e:
+                results[path] = f"Error: {str(e)}"
+        return results
 
     def write_file(self, file_path: str, content: str) -> str:
         resolved = self.security.resolve_path(file_path)
@@ -36,6 +54,10 @@ class FileSystemService:
     def list_directory(self, directory: str = ".") -> List[Dict[str, Any]]:
         resolved = self.security.resolve_path(directory)
         return self.io.list_directory(resolved)
+
+    def search_files(self, pattern: str, directory: str = ".") -> List[str]:
+        if not self.searcher: return []
+        return self.searcher.search_files(pattern, directory)
 
     def search_content(self, query: str, directory: str = ".") -> List[Dict[str, Any]]:
         if not self.searcher: return [{"error": "Search engine not initialized."}]
@@ -75,10 +97,19 @@ class FileSystemService:
 
     def diff_file_range_with_string(self, file_path: str, text: str, 
                                    start_line: Optional[int] = None, 
-                                   end_line: Optional[int] = None) -> str:
+                                   end_line: Optional[int] = None,
+                                   context_lines: int = 3) -> str:
         resolved = self.security.resolve_path(file_path)
-        return self.patcher.diff_file_range_with_string(resolved, text, start_line, end_line)
+        return self.patcher.diff_file_range_with_string(resolved, text, start_line, end_line, context_lines)
 
     def apply_patch(self, target_path: str, patch_text: str) -> str:
         resolved = self.security.resolve_path(target_path)
         return self.patcher.apply_patch(resolved, patch_text)
+
+    def directory_tree(self, directory: str = ".", max_depth: int = 3) -> str:
+        # Use explorer to generate the tree
+        # If the directory is within allowed roots, resolve_path will handle it
+        resolved_dir = self.security.resolve_path(directory)
+        # We need a relative path from the security manager's base if we want to use explorer's logic,
+        # but explorer takes its own project_root. Let's make it simple.
+        return self.explorer.get_tree(directory, max_depth)
