@@ -4,24 +4,26 @@ import re
 from typing import Optional, List
 from fastmcp import FastMCP
 
-def register_file_tools(mcp: FastMCP, file_svc, diag_svc):
+def register_file_tools(mcp: FastMCP, file_svc, diag_svc, doc_svc=None):
     @mcp.tool()
-    async def read_file(file_path: str, start_line: Optional[int] = None, end_line: Optional[int] = None) -> str:
-        """Read a file with optional line range."""
-        try: return file_svc.read_file(file_path, start_line, end_line)
-        except Exception as e: return str(e)
+    async def read_file(file_path: str, mode: str = "auto", start_line: Optional[int] = None, end_line: Optional[int] = None) -> str:
+        """
+        Smart unified file reader for text and rich documents (PDF, DOCX, EPUB).
+        
+        Args:
+            file_path: Path to the target file.
+            mode: 'auto' (detect), 'text' (force text), or 'rich' (force doc extraction).
+            start_line: Starting line number for text files (1-indexed).
+            end_line: Ending line number for text files (inclusive).
+            
+        Note: For PDF/DOCX, line parameters are ignored and 50k char limit applies.
+        Text files > 5MB require line ranges for safety.
+        """
+        try:
+            return file_svc.read_file(file_path, start_line, end_line, mode=mode, doc_svc=doc_svc)
+        except Exception as e:
+            return str(e)
 
-    @mcp.tool()
-    async def read_text_file(file_path: str) -> str:
-        """Read a full text file."""
-        try: return file_svc.read_text_file(file_path)
-        except Exception as e: return str(e)
-
-    @mcp.tool()
-    async def read_media_file(file_path: str) -> str:
-        """Get metadata for media files (images, audio, etc.)."""
-        try: return json.dumps(file_svc.read_media_file(file_path), indent=2)
-        except Exception as e: return str(e)
 
     @mcp.tool()
     async def read_multiple_files(file_paths: List[str]) -> str:
@@ -63,7 +65,10 @@ def register_file_tools(mcp: FastMCP, file_svc, diag_svc):
 
     @mcp.tool()
     async def directory_tree(directory: str = ".", max_depth: int = 3) -> str:
-        """Show visual directory structure."""
+        """
+        Returns a flattened 'Indexed File Graph' of the directory, optimized for AI reasoning.
+        Provides rich metadata (sizes, counts, types, roles) and respects .gitignore rules.
+        """
         try: return file_svc.directory_tree(directory, max_depth)
         except Exception as e: return str(e)
 
@@ -84,17 +89,32 @@ def register_file_tools(mcp: FastMCP, file_svc, diag_svc):
         except Exception as e: return str(e)
 
     @mcp.tool()
-    async def search_content(query: str, directory: str = ".") -> str:
+    async def search_semantic(query: str, directory: str = ".", context_before: int = 5, context_after: int = 5) -> str:
         """
-        Search for text within files using Ripgrep (rg). 
-        Extremely fast text search within files.
+        ONLY USE THIS TOOL FOR CONCEPTUAL QUERIES. This tool searches the VECTOR DATABASE, not the live file system. If you need to find a specific variable or string in current files, use [grep_search] instead.
+
+        This tool uses a semantic retrieval engine to find files and code snippets that match the **meaning** of your query. It is ideal for answering high-level questions about the codebase or locating logic patterns. Returns results in JSON format with code blocks, file paths, and relevance scores.
         """
-        err = await diag_svc.check_tool_dependency("search_content")
+        err = await diag_svc.check_tool_dependency("search_semantic")
         if err: return err
         try:
-            results = file_svc.search_content(query, directory)
-            return json.dumps(results, indent=2)
-        except Exception as e: return str(e)
+            results = file_svc.search_content(query, directory, context_before, context_after)
+            
+            primary = None
+            related = []
+            
+            if results and "error" not in results[0]:
+                primary = results[0]
+                related = results[1:]
+                
+            output = {
+                "query": query,
+                "primary_result": primary,
+                "related_results": related
+            }
+            return json.dumps(output, indent=2)
+        except Exception as e:
+            return json.dumps({"error": str(e)})
 
     @mcp.tool()
     async def get_file_info(file_path: str) -> str:
@@ -102,28 +122,27 @@ def register_file_tools(mcp: FastMCP, file_svc, diag_svc):
         try: return json.dumps(file_svc.get_file_info(file_path), indent=2)
         except Exception as e: return str(e)
 
-    @mcp.tool()
-    async def list_allowed_directories() -> str:
-        """List allowed project directories."""
-        return f"Allowed: {file_svc.list_allowed_directories()}"
+
 
     # --- Feature: Diff & Patch ---
 
     @mcp.tool()
-    async def diff_files(path_a: str, path_b: str, context_lines: int = 3) -> str:
-        """Return a unified diff between two files."""
+    async def diff_file_range_with_string(target_file: str, text: str, 
+                                         start_line: Optional[int] = None, 
+                                         end_line: Optional[int] = None, 
+                                         context_lines: int = 3) -> str:
+        """
+        Bir dosyanın belirli bir satır aralığını sağlanan bir metin içeriğiyle karşılaştırır.
+        
+        Args:
+            target_file: Karşılaştırılacak dosyanın yolu.
+            text: Dosya içeriğiyle karşılaştırılacak ham metin (string).
+            start_line: Dosyanın okunmaya başlanacağı satır (1-indexed, opsiyonel).
+            end_line: Dosyanın okunacağı son satır (dahil, opsiyonel).
+            context_lines: Diff çıktısında gösterilecek bağlam satır sayısı (varsayılan: 3).
+        """
         try:
-            return file_svc.diff_files(path_a, path_b, context_lines)
-        except Exception as e:
-            return str(e)
-
-    @mcp.tool()
-    async def diff_strings(text_a: str, text_b: str,
-                           label_a: str = "original", label_b: str = "modified",
-                           context_lines: int = 3) -> str:
-        """Return a unified diff between two text strings."""
-        try:
-            return file_svc.diff_strings(text_a, text_b, label_a, label_b, context_lines)
+            return file_svc.diff_file_range_with_string(target_file, text, start_line, end_line, context_lines)
         except Exception as e:
             return str(e)
 

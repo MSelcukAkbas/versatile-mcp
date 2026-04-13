@@ -3,39 +3,62 @@ from typing import Optional, List, Dict, Any
 from mcp.server.fastmcp import FastMCP
 
 def register_process_tools(mcp: FastMCP, services: Dict[str, Any], config: Dict[str, Any]):
-    """Registers background process management tools."""
+    """Registers unified background work management tool."""
     
     process_svc = services["process"]
-    paths = config["paths"]
+    async_task_svc = services.get("async_task")
+    diag_svc = services.get("diag")
+    paths = config.get("paths", {})
 
     @mcp.tool()
-    async def run_background_command(command: str, project_root: Optional[str] = None) -> Dict[str, Any]:
+    async def manage_background_job(
+        action: str, 
+        identifier: Optional[str] = None, 
+        tail: int = 50,
+        project_root: Optional[str] = None
+    ) -> Any:
         """
-        Runs a terminal command in the background. 
-        Waits 3 seconds to see if it finishes or errors out early.
-        Returns a task_id if it continues to run.
+        Unified tool for managing background OS processes and internal system tasks.
+        
+        Actions:
+        - run: Start a new background terminal command. 'identifier' is the command string.
+        - status: Check status/output of a job. 'identifier' is the task_id.
+        - stop: Terminate a job. 'identifier' is the task_id.
+        - list: List all active background processes and system tasks.
+        - search: Find system processes by name. 'identifier' is the process name.
         """
-        root = project_root or paths["PROJECT_ROOT"] or os.getcwd()
-        return await process_svc.run_command(command, root)
+        if action == "run":
+            if not identifier: return "Error: 'identifier' (command) is required for action 'run'."
+            root = project_root or paths.get("PROJECT_ROOT") or os.getcwd()
+            return await process_svc.run_command(identifier, root)
+            
+        elif action == "status":
+            if not identifier: return "Error: 'identifier' (task_id) is required for action 'status'."
+            # Try external processes first
+            status = process_svc.get_status(identifier, tail=tail)
+            if status.get("status") != "error":
+                return status
+            # Fallback to internal tasks
+            if async_task_svc:
+                return async_task_svc.get_status(identifier)
+            return status
 
-    @mcp.tool()
-    def get_process_status(task_id: str, tail: int = 50) -> Dict[str, Any]:
-        """
-        Checks the status and output of a background task.
-        Use this to follow progress of a running process.
-        """
-        return process_svc.get_status(task_id, tail=tail)
-
-    @mcp.tool()
-    def stop_process(task_id: str) -> Dict[str, Any]:
-        """
-        Stops a running background task and all its child processes.
-        """
-        return process_svc.stop_task(task_id)
-
-    @mcp.tool()
-    def list_background_processes() -> List[Dict[str, Any]]:
-        """
-        Lists all background tasks managed by this server.
-        """
-        return process_svc.list_tasks()
+        elif action == "stop":
+            if not identifier: return "Error: 'identifier' (task_id) is required for action 'stop'."
+            return process_svc.stop_task(identifier)
+            
+        elif action == "list":
+            return {
+                "OS_Processes": process_svc.list_tasks(),
+                "Internal_Tasks": async_task_svc.list_tasks() if async_task_svc else []
+            }
+            
+        elif action == "search":
+            if not identifier: return "Error: 'identifier' (name) is required for action 'search'."
+            if not diag_svc: return "Error: DiagnosticService not available."
+            results = diag_svc.find_process(identifier)
+            if not results:
+                return f"No process found matching '{identifier}'."
+            return results
+            
+        return f"Error: Unknown action '{action}'. Valid actions are: run, status, stop, list, search."

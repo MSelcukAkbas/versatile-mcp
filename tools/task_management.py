@@ -8,13 +8,13 @@ def register_task_tools(mcp: FastMCP, task_svc, planner_svc, diag_svc):
     @mcp.tool()
     async def create_plan(
         goal: str,
+        project_root: str,
         execution_plan: List[Dict[str, Any]],
         problem_analysis: Optional[Dict[str, Any]] = None,
         best_practices: Optional[List[str]] = None,
         risk_assessment: Optional[List[str]] = None,
         context: Optional[str] = None,
         constraints: Optional[List[str]] = None,
-        project_root: Optional[str] = None,
     ) -> str:
         """
         Analyze a problem and produce a structured execution plan before making changes.
@@ -82,7 +82,7 @@ def register_task_tools(mcp: FastMCP, task_svc, planner_svc, diag_svc):
             return f"ERROR: {str(e)}"
 
     @mcp.tool()
-    async def task_mark_step(task_id: str, step_index: int, status: str, project_root: Optional[str] = None) -> str:
+    async def task_mark_step(task_id: str, step_index: int, status: str, project_root: str) -> str:
         """
         Mark a specific step of a plan as 'todo', 'in_progress', or 'done'.
         Call this after completing each step so progress is tracked.
@@ -96,7 +96,7 @@ def register_task_tools(mcp: FastMCP, task_svc, planner_svc, diag_svc):
             return str(e)
 
     @mcp.tool()
-    async def task_get_active(project_root: Optional[str] = None) -> str:
+    async def task_get_active(project_root: str) -> str:
         """Retrieve all active, non-completed plans and their steps."""
         err = await diag_svc.check_tool_dependency("task_get_active")
         if err: return err

@@ -1,7 +1,7 @@
-from typing import Optional
+from typing import Optional, Dict, Any, List
 from fastmcp import FastMCP
 
-def register_reasoning_tools(mcp: FastMCP, thinking_svc, diag_svc):
+def register_reasoning_tools(mcp: FastMCP, thinking_svc, diag_svc, project_root: str):
     @mcp.tool()
     async def sequentialthinking(
         thought: str,
@@ -13,10 +13,13 @@ def register_reasoning_tools(mcp: FastMCP, thinking_svc, diag_svc):
         branch_from_thought: Optional[int] = None,
         branch_id: Optional[str] = None,
         needs_more_thoughts: bool = False,
+        context: Optional[Dict[str, Any]] = None,
+        available_tools: Optional[List[str]] = None,
+        memory_keys: Optional[List[str]] = None,
     ) -> str:
         """
-        A detailed tool for dynamic and reflective problem-solving through thoughts.
-        This tool helps analyze problems through a flexible thinking process that can
+        A detailed tool for dynamic reasoning and mini-agent planning.
+        This tool analyzes your thoughts, fetches auto-memory context, and suggests tools.
         adapt and evolve. Each thought can build on, question, or revise previous insights.
 
         When to use this tool:
@@ -32,24 +35,19 @@ def register_reasoning_tools(mcp: FastMCP, thinking_svc, diag_svc):
         - Add more thoughts even after reaching what seemed like the end.
 
         Parameters:
-        - thought: Your current thinking step (analysis, revision, hypothesis, etc.).
-        - thought_number: Current number in sequence (can exceed initial total).
-        - total_thoughts: Estimated remaining thoughts needed (can be adjusted).
+        - thought: Your current thinking step (analysis, hypothesis, etc.).
+        - thought_number: Current number in sequence.
+        - total_thoughts: Estimated remaining thoughts needed.
         - next_thought_needed: True if more thinking is needed.
-        - is_revision: True if this thought revises a previous one.
-        - revises_thought: Which thought number is being reconsidered.
-        - branch_from_thought: Branching point thought number.
-        - branch_id: Identifier for the current branch.
-        - needs_more_thoughts: True if you realize more thoughts are needed at the end.
-
-        Only set next_thought_needed to false when truly done and a satisfactory
-        answer has been reached.
+        - context: Optional dict containing current context (e.g. status_code, service names).
+        - available_tools: Optional list of tool names (strings) you can use.
+        - memory_keys: Optional list of keywords to auto-retrieve past facts.
         """
         err = await diag_svc.check_tool_dependency("sequentialthinking")
         if err: return err
 
         import json
-        result = thinking_svc.add_thought(
+        result = await thinking_svc.add_thought(
             thought=thought,
             thought_number=thought_number,
             total_thoughts=total_thoughts,
@@ -59,8 +57,12 @@ def register_reasoning_tools(mcp: FastMCP, thinking_svc, diag_svc):
             branch_from_thought=branch_from_thought,
             branch_id=branch_id,
             needs_more_thoughts=needs_more_thoughts,
+            context=context,
+            memory_keys=memory_keys,
+            available_tools=available_tools,
+            project_root=project_root
         )
-        return json.dumps(result, indent=2)
+        return json.dumps(result, indent=2, ensure_ascii=False)
 
     @mcp.tool()
     async def clear_thinking() -> str:

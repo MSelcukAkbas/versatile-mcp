@@ -43,24 +43,29 @@ class LlamaService:
             except Exception as e:
                 logger.error(f"LlamaService | Failed to load model: {e}")
 
-    def get_embeddings(self, text: str) -> List[float]:
-        """Generate embeddings for a single string."""
+    async def get_embeddings(self, text: str) -> List[float]:
+        """Generate embeddings for a single string using local model in a separate thread."""
         if LlamaService._llm is None:
             self._initialize_llm()
             if LlamaService._llm is None:
                 return []
 
         try:
-            # llama-cpp-python v0.2.x+ API
-            output = LlamaService._llm.create_embedding(text)
+            # Wrap the heavy CPU-bound create_embedding call in a thread
+            # This prevents it from blocking the main asyncio event loop.
+            import asyncio
+            output = await asyncio.to_thread(LlamaService._llm.create_embedding, text)
             return output['data'][0]['embedding']
         except Exception as e:
             logger.error(f"LlamaService | Embedding generation failed: {e}")
             return []
 
-    def get_embeddings_batch(self, texts: List[str]) -> List[List[float]]:
-        """Generate embeddings for a list of strings."""
-        return [self.get_embeddings(t) for t in texts]
+    async def get_embeddings_batch(self, texts: List[str]) -> List[List[float]]:
+        """Generate embeddings for a list of strings asycnhronously."""
+        results = []
+        for text in texts:
+            results.append(await self.get_embeddings(text))
+        return results
 
     @property
     def is_ready(self) -> bool:

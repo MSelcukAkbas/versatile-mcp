@@ -8,11 +8,20 @@ from typing import Dict, List
 SERVER_HOME = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 def get_default_root() -> str:
-    """Smart root detection that avoids AppData/Program Files context if run from CLI."""
+    """Smart root detection that avoids AppData/Program Files context.
+    If run from within the server directory itself, defaults to one level up.
+    """
     cwd = os.getcwd()
+    
+    # If we are running from inside the mcp_master or similar server folder,
+    # the project root is likely one level up.
+    if cwd.lower() == SERVER_HOME.lower():
+        return os.path.dirname(SERVER_HOME)
+        
     app_dirs = ["AppData", "Program Files", "System32", "Temp"]
     if any(p.lower() in cwd.lower() for p in app_dirs):
         return os.path.dirname(SERVER_HOME)
+        
     return cwd
 
 PROJECT_ROOT = os.getenv("PROJECT_ROOT", get_default_root())
@@ -64,25 +73,28 @@ def build_paths(project_root: str, project_id: str) -> Dict[str, str]:
         "tasks": os.path.join(local_data_dir, "tasks.json"),
         "audit_logs": os.path.join(GLOBAL_DATA_DIR, "global", "audit_logs"),  # Global, not per-project
         "requirements": os.path.join(SERVER_HOME, "requirements.txt"),
+        "default_ignores": os.path.join(SERVER_HOME, "config", "default_ignores.txt"),
         "models": os.path.join(SERVER_HOME, "models"),
         "embedding_model": os.path.join(SERVER_HOME, "models", "paraphrase-multilingual-MiniLM-L12-118M-v2-Q8_0.gguf"),
     }
 
 PATHS: Dict[str, str] = build_paths(PROJECT_ROOT, PROJECT_ID)
 
-def resolve_paths(project_root: str | None = None) -> Dict[str, str]:
+def resolve_paths(project_root: str) -> Dict[str, str]:
     """
     Get paths for a specific project_root.
-    If project_root is None, returns the current PATHS (initial PROJECT_ROOT).
+    This is the core for dynamic, multi-project support.
     """
     if not project_root:
-        return PATHS
+        raise ValueError("project_root is mandatory for dynamic path resolution.")
+        
     project_id = get_project_id(project_root)
     return build_paths(project_root, project_id)
 
 # --- Service Settings ---
 OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://localhost:11434")
 DEFAULT_MODEL = os.getenv("DEFAULT_MODEL", "qwen2.5-coder:7b-instruct-q4_K_M")
+MAX_INDEX_FILE_SIZE = 5 * 1024 * 1024  # 5 MB
 STACK_EXCHANGE_API_KEY = os.getenv("STACK_EXCHANGE_API_KEY")
 
 # --- Directory Initialization ---

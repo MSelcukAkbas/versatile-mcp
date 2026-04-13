@@ -23,10 +23,10 @@ class TaskService:
             with open(path, 'w', encoding='utf-8') as f:
                 json.dump({"tasks": []}, f, indent=2)
 
-    def _get_tasks_path(self, project_root: Optional[str] = None) -> str:
-        """Get tasks.json path for a given project_root, or default path if None."""
+    def _get_tasks_path(self, project_root: str) -> str:
+        """Get tasks.json path for a given project_root. Mandatory."""
         if not project_root:
-            return self.file_path
+            raise ValueError("project_root is mandatory for TaskService.")
         paths = resolve_paths(project_root)
         return paths["tasks"]
 
@@ -40,11 +40,10 @@ class TaskService:
         with open(path, 'w', encoding='utf-8') as f:
             json.dump(data, f, indent=2)
 
-    def create_plan(self, title: str, execution_plan: List[Dict[str, Any]],
+    def create_plan(self, title: str, project_root: str, execution_plan: List[Dict[str, Any]],
                     problem_analysis: Optional[Dict] = None,
                     best_practices: Optional[List[str]] = None,
-                    risk_assessment: Optional[List[str]] = None,
-                    project_root: Optional[str] = None) -> str:
+                    risk_assessment: Optional[List[str]] = None) -> str:
         """Create a new advanced task plan containing problem analysis and detailed steps."""
         file_path = self._get_tasks_path(project_root)
         self._ensure_file_exists(file_path)
@@ -75,7 +74,7 @@ class TaskService:
         logger.info(f"Created advanced task plan: {title} ({task_id})")
         return task_id
 
-    def mark_step(self, task_id: str, step_index: int, status: str, project_root: Optional[str] = None) -> str:
+    def mark_step(self, task_id: str, step_index: int, status: str, project_root: str) -> str:
         """Update the status of a specific step (todo, in_progress, done)."""
         if status not in ["todo", "in_progress", "done"]:
             return "Error: Status must be 'todo', 'in_progress', or 'done'."
@@ -100,7 +99,7 @@ class TaskService:
 
         return f"Error: Task {task_id} not found."
 
-    def get_active_tasks(self, project_root: Optional[str] = None) -> List[Dict[str, Any]]:
+    def get_active_tasks(self, project_root: str) -> List[Dict[ Any]]:
         """Retrieve all non-completed tasks."""
         file_path = self._get_tasks_path(project_root)
         if not os.path.exists(file_path):
@@ -109,7 +108,7 @@ class TaskService:
         active_tasks = [task for task in data["tasks"] if task["status"] != "done"]
         return active_tasks
 
-    def get_all_tasks(self, project_root: Optional[str] = None) -> List[Dict[str, Any]]:
+    def get_all_tasks(self, project_root: str) -> List[Dict[Any]]:
         """Retrieve all recorded tasks across time."""
         file_path = self._get_tasks_path(project_root)
         if not os.path.exists(file_path):

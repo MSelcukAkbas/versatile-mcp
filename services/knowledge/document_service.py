@@ -56,15 +56,28 @@ class DocumentService:
                 chapters.append(soup.get_text())
         return "\n".join(chapters)
 
-    def chunk_text(self, text: str, chunk_size: int = 1500, overlap: int = 200) -> List[str]:
-        """Split large text into smaller chunks with overlap for better RAG indexing."""
+    def chunk_text(self, text: str, chunk_size_lines: int = 50, overlap_lines: int = 10) -> List[Dict[str, Any]]:
+        """Split large text into line-aware chunks with overlap for better RAG indexing."""
         if not text:
             return []
             
+        lines = text.splitlines()
         chunks = []
         start = 0
-        while start < len(text):
-            end = start + chunk_size
-            chunks.append(text[start:end])
-            start += chunk_size - overlap
+        
+        while start < len(lines):
+            end = min(start + chunk_size_lines, len(lines))
+            chunk_content = "\n".join(lines[start:end])
+            
+            chunks.append({
+                "content": chunk_content,
+                "line_start": start + 1,
+                "line_end": end,
+                "total_lines": len(lines)
+            })
+            
+            if end == len(lines):
+                break
+            start += (chunk_size_lines - overlap_lines)
+            
         return chunks

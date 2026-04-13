@@ -14,7 +14,6 @@ The heart of **Versatile-MCP** is its local operational layer. These features do
 - **🚀 Blazing Fast Research**: Real-time web search and StackOverflow integration.
 - **🔍 Deep File Operations**: High-performance recursive search (`ripgrep`) and directory management.
 - **✅ Professional Validation**: Local syntax checking and linting for Python (Ruff), JS/TS (Olint/Biome), and more.
-- **☁️ GitHub Pure API Integration**: Manage repositories, issues, PRs, and perform Git operations (push, pull, diff) **without** a local Git CLI installation.
 - **📅 Structured Task Management**: Goal-oriented planning, step tracking, and project history.
 
 ---
@@ -23,9 +22,8 @@ The heart of **Versatile-MCP** is its local operational layer. These features do
 
 | Feature Category | Tool Examples | Status (Native Core) | status (Ollama Req) |
 | :--- | :--- | :--- | :--- |
-| **Memory / RAG** | `memory_search_semantic`, `memory_index_workspace` | ✅ **Active (Native)** | - |
-| **GitHub (Pure API)** | `github_api_push`, `github_api_sync`, `github_manage_issues` | ✅ **Active** | - |
-| **Research** | `web_search`, `search_stackoverflow` | ✅ **Active** | - |
+| **Knowledge Retrieval** | `web_search`, `search_stackoverflow` | ✅ **Active** | - |
+| **Unified Lite Memory** | `memory_store_fact`, `memory_retrieve_facts`, `memory_index_workspace`, ... | ✅ **Active** | SQLite + Hybrid |
 | **File Ops** | `search_content`, `read_file`, `edit_file` | ✅ **Active** | - |
 | **Validation** | `validate_syntax` (Python, JS, TS) | ✅ **Active** | - |
 | **Reasoning** | `sequentialthinking`, `create_plan` | ✅ **Active** | - |
@@ -40,7 +38,6 @@ The heart of **Versatile-MCP** is its local operational layer. These features do
 - `ripgrep` (Fastest text search)
 - `ruff` (Fastest Python linter)
 - `oxlint` & `biome` (Modern web toolchain)
-- `gitleaks` (Security audit)
 
 ---
 

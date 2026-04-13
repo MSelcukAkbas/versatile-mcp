@@ -25,11 +25,15 @@ def register_diagnostic_tools(mcp: FastMCP, diag_svc, audit_logs_path, memory_pa
                 "Description": "RAG & Fact system. Facts are auto-indexed semantically."
             },
             "Smart File Operations": {
-                "Tools": ["read_file", "write_file", "edit_file", "list_directory", "directory_tree", "search_files", "validate_syntax"],
+                "Tools": ["read_file", "write_file", "edit_file", "list_directory", "directory_tree", "search_files", "search_semantic", "validate_syntax"],
                 "Description": "File management with syntax validation and recursive search."
             },
             "System & Project Monitoring": {
-                "Tools": ["system_info", "debug_paths", "list_audit_logs", "get_project_history", "task_get_active", "simulate_diagnostic_failure"],
+                "Tools": [
+                    "system_info", "get_project_history", 
+                    "task_get_active", "simulate_diagnostic_failure", 
+                    "check_port", "manage_background_job", "remote_ssh_command"
+                ],
                 "Description": "Health checks, audit logs, and diagnostic simulations."
             }
         }
@@ -41,39 +45,8 @@ def register_diagnostic_tools(mcp: FastMCP, diag_svc, audit_logs_path, memory_pa
         diag_svc.simulate_failure(component)
         return f"Simulated failure for '{component}'. Run get_tool_inventory or a tool requiring it to see effects."
 
-    @mcp.tool()
-    async def list_audit_logs() -> str:
-        """List available audit log files (.jsonl) with entry counts."""
-        try:
-            if not os.path.exists(audit_logs_path):
-                return "No audit logs directory found."
-            
-            files = sorted(
-                [f for f in os.listdir(audit_logs_path) if f.endswith(".jsonl")],
-                reverse=True
-            )
-            if not files:
-                return "No audit log files found yet (.jsonl). Logs are created on first tool call."
-            
-            lines = ["Audit Logs (JSON Lines format):"]
-            for fname in files:
-                fpath = os.path.join(audit_logs_path, fname)
-                try:
-                    with open(fpath, "r", encoding="utf-8", errors="replace") as f:
-                        count = sum(1 for line in f if line.strip())
-                    size_kb = os.path.getsize(fpath) / 1024
-                    lines.append(f"  {fname}  ({count} entries, {size_kb:.1f} KB)")
-                except Exception:
-                    lines.append(f"  {fname}  (unreadable)")
-            
-            return "\n".join(lines)
-        except Exception as e:
-            return f"Error listing audit logs: {str(e)}"
 
-    @mcp.tool()
-    async def debug_paths() -> str:
-        """Show internal system paths for debugging."""
-        return f"SERVER_HOME: {SERVER_HOME}\nPROJECT_ROOT: {PROJECT_ROOT}\nMemory: {memory_path}\nAudit: {audit_logs_path}"
+
 
     @mcp.tool()
     async def system_info() -> str:
@@ -139,18 +112,3 @@ def register_diagnostic_tools(mcp: FastMCP, diag_svc, audit_logs_path, memory_pa
             )
         return f"Port {port} is free."
 
-    @mcp.tool()
-    async def find_process(name: str) -> str:
-        """Find running processes whose name contains *name* (case-insensitive)."""
-        results = diag_svc.find_process(name)
-        if not results:
-            return f"No running process found matching '{name}'."
-        if "error" in results[0]:
-            return f"Error: {results[0]['error']}"
-        lines = [f"Found {len(results)} process(es) matching '{name}':"]
-        for p in results:
-            lines.append(
-                f"  PID {p['pid']}  [{p['status']}]  {p['name']}"
-                + (f"\n    cmd: {p['cmdline']}" if p["cmdline"] else "")
-            )
-        return "\n".join(lines)

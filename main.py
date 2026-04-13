@@ -20,12 +20,12 @@ if sys.platform == "win32":
 from services.core.env_service import EnvService
 from services.core.bin_service import BinService
 from services.core.diagnostic_service import DiagnosticService
-from services.core.diagnostic_service import DiagnosticService
 from services.core.file_service import FileService
 from services.core.validation_service import ValidationService
-from services.core.audit_service import AuditService, AuditMiddleware
 from services.core.logger_service import setup_logger, log_startup_banner
 from services.core.process_service import ProcessService
+from services.core.ignore_service import IgnoreService
+from services.core.async_task_service import AsyncTaskService
 from services.knowledge.http_client_service import HttpClientService
 
 # AI
@@ -39,8 +39,6 @@ from services.knowledge.document_service import DocumentService
 from services.knowledge.search_service import SearchService
 from services.knowledge.stackoverflow_service import StackOverflowService
 from services.knowledge.memory_service import MemoryService
-from services.knowledge.git_service import GitService
-
 
 # Orchestration
 from services.orchestration.planner_service import PlannerService
@@ -58,46 +56,58 @@ def bootstrap():
 
     # 0. Environment Verification & Auto-Setup
     logger.info("Bootstrap | Checking dependencies...")
-    EnvService.check_and_install_dependencies(PATHS["requirements"])
     
     ensure_directories()
     
     mcp = FastMCP("Versatile-MCP")
     
     logger.info("Bootstrap | Initializing services...")
+    
+    logger.debug("Initializing BinService...")
     bin_svc = BinService(PATHS["PROJECT_ROOT"])
+    
+    logger.debug("Initializing OllamaService...")
     ollama_svc = OllamaService(host=OLLAMA_HOST)
-    llama_svc = LlamaService(model_path=PATHS["embedding_model"])
+    
+    logger.debug("Initializing LlamaService (Lazy)...")
+    llama_svc = LlamaService() # model_path=None trigger lazy loading later
+    
+    logger.debug("Initializing DocumentService...")
     doc_svc = DocumentService()
     
-    git_svc = GitService(logger, bin_svc)
+    logger.debug("Initializing IgnoreService...")
+    ignore_svc = IgnoreService(PATHS["default_ignores"], PATHS["PROJECT_ROOT"])
+    
+    logger.debug("Initializing MemoryService...")
+    memory_svc = MemoryService(PATHS["local_memory"], PATHS["global_memory"], llama_svc)
+    
+    logger.debug("Initializing ThinkingService (Autonomous & In-Memory Loop Detection)...")
+    thinking_svc = ThinkingService(memory_svc=memory_svc)
+    
+    logger.info("Bootstrap | Core services initialized. Assembling mapping...")
     
     services = {
-        "file": FileService(ALLOWED_ROOTS),
+        "file": FileService(ALLOWED_ROOTS, ignore_svc),
         "ollama": ollama_svc,
         "llama": llama_svc,
         "doc": doc_svc,
         "bin": bin_svc,
-        "diag": DiagnosticService(ollama_svc, bin_svc, git_svc),
+        "diag": DiagnosticService(ollama_svc, bin_svc),
         "prompt": PromptService(PATHS["prompts"]),
         "search": SearchService(),
         "stackoverflow": StackOverflowService(api_key=os.getenv("STACK_EXCHANGE_API_KEY")),
         "planner": PlannerService(),
         "validator": ValidationService(),
-        "thinking": ThinkingService(),
-        "memory": MemoryService(PATHS["local_memory"], PATHS["global_memory"], llama_svc),
+        "thinking": thinking_svc,
+        "memory": memory_svc,
         "task": TaskService(PATHS["tasks"]),
-        "audit": AuditService(PATHS["audit_logs"]),
-        "git": git_svc,
         "logger": logger,
         "process": ProcessService(Path(PATHS["SERVER_HOME"]) / ".mcp-master"),
         "http": HttpClientService(),
+        "ignore": ignore_svc,
+        "async_task": AsyncTaskService(),
     }
-    logger.info(f"Bootstrap | {len(services)} services initialized.")
-    
-    # Register Middleware
-    mcp.add_middleware(AuditMiddleware(services["audit"]))
-    logger.info("Bootstrap | AuditMiddleware registered (JSONL format).")
+    logger.info(f"Bootstrap | {len(services)} services ready.")
     
     # Register All Tools
     register_all_tools(mcp, services, PATHS)
@@ -113,10 +123,15 @@ if __name__ == "__main__":
     host = os.getenv("MCP_HOST", "127.0.0.1")
     port = int(os.getenv("MCP_PORT", "8000"))
 
-    app_logger.info(f"Master MCP Server starting (transport={transport}, host={host}, port={port})...)")
+    app_logger.info(f"Master MCP Server starting (transport={transport}, host={host}, port={port})...")
     
-    if transport == "stdio":
-        mcp_app.run()
-    else:
-        # For SSE or HTTP
-        mcp_app.run(transport=transport, host=host, port=port)
+    try:
+        if transport == "stdio":
+            mcp_app.run()
+        else:
+            # For SSE or HTTP
+            app_logger.info(f"SSE Dashboard available at http://{host}:{port}")
+            mcp_app.run(transport=transport, host=host, port=port)
+    except Exception as e:
+        app_logger.critical(f"FATAL ERROR: Server failed to start or crashed: {e}", exc_info=True)
+        sys.exit(1)

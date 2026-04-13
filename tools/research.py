@@ -6,8 +6,15 @@ def register_research_tools(mcp: FastMCP, search_svc, validator_svc, stackoverfl
     @mcp.tool()
     async def validate_syntax(content: str, extension: str) -> str:
         """
-        Validate code syntax locally without any AI. 
-        Supports: json, yaml, py, xml, js, ts, mjs, cjs, mts, cts.
+        Validates code syntax using local high-performance engines (Ruff, Oxlint, Biome).
+        
+        Supported Extensions:
+        - Python: .py
+        - JavaScript: .js, .mjs, .cjs
+        - TypeScript: .ts, .mts, .cts
+        - Data/Markup: .json, .yaml, .yml, .xml
+        
+        Returns 'SUCCESS' if valid, or 'FAILURE: [Error Message]' on syntax error.
         """
         err = await diag_svc.check_tool_dependency("validate_syntax")
         if err: return err

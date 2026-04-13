@@ -64,7 +64,7 @@ class BinService:
 
     def check_all_bins(self) -> dict:
         """Check availability of all required tools."""
-        tools = ["ruff", "rg", "oxlint", "biome", "gitleaks", "git"]
+        tools = ["ruff", "rg", "oxlint", "biome"]
         results = {}
         for tool in tools:
             results[tool] = self.is_tool_available(tool)

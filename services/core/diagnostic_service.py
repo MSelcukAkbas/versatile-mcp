@@ -8,10 +8,9 @@ logger = setup_logger("DiagnosticService")
 
 class DiagnosticService:
     """Consolidated health monitoring for all Master MCP dependencies."""
-    def __init__(self, ollama_svc, bin_svc, git_svc=None):
+    def __init__(self, ollama_svc, bin_svc):
         self.ollama = ollama_svc
         self.bin = bin_svc
-        self.git = git_svc
         
         # Cache management
         self._last_check_time = 0
@@ -27,12 +26,6 @@ class DiagnosticService:
         ollama_ok = await self.ollama.is_ready() if "ollama" not in self._simulated_failures else False
         bin_results = self.bin.check_all_bins()
         
-
-        # Git Check
-        git_status = {"status": "Offline", "details": "Git binary not found"}
-        if self.bin.is_tool_available("git"):
-            git_status = {"status": "Online", "details": "Git CLI available"}
-
         self._health_cache = {
             "timestamp": now,
             "components": {
@@ -43,8 +36,7 @@ class DiagnosticService:
                 "binaries": {
                     "status": "Online" if all(bin_results.values()) else "Degraded",
                     "details": bin_results
-                },
-                "git": git_status
+                }
             }
         }
         self._last_check_time = now
@@ -54,12 +46,6 @@ class DiagnosticService:
         report = await self.get_health_report()
         components = report.get("components", {})
         
-        # Git tools dependency
-        git_tools = ["git_push", "git_pull", "git_diff", "git_status"]
-        if tool_name in git_tools:
-            if components["git"]["status"] != "Online":
-                return "Git binary is not found on this system. Please install Git to use these tools."
-
         # File tools dependency (specific binaries)
         bin_details = components["binaries"]["details"]
         mapping = {

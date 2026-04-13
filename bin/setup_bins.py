@@ -20,7 +20,7 @@ def check_binaries():
     project_root = Path(__file__).parent.parent
     bin_dir = project_root / "bin" / plat
     
-    required_tools = ["ruff", "biome", "oxlint", "gitleaks", "rg"]
+    required_tools = ["ruff", "biome", "oxlint", "rg"]
     found_all = True
     
     if "win32" in plat:
@@ -44,7 +44,6 @@ def check_binaries():
         print("    - ripgrep (rg): sudo apt install ripgrep")
         print("    - ruff: pip install ruff")
         print("    - biome: npm install -g @biomejs/biome")
-        print("    - gitleaks: download from github.com/gitleaks/gitleaks")
 
 if __name__ == "__main__":
     check_binaries()
