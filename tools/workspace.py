@@ -2,9 +2,9 @@ import json
 import pathlib
 from typing import Optional, List
 from fastmcp import FastMCP
-from config.settings import ALLOWED_ROOTS, PATHS
-from services.core.workspace_analyzer import WorkspaceAnalyzer
-from services.core.ignore_service import IgnoreService
+from resources.config.settings import PROJECT_ROOT, PROJECT_ID
+from services.infrastructure.analysis import WorkspaceAnalyzerService
+from services.infrastructure.system.ignore_service import IgnoreService
 
 def register_workspace_tools(mcp: FastMCP, workspace_svc):
     
@@ -54,7 +54,7 @@ def register_workspace_tools(mcp: FastMCP, workspace_svc):
                 )
 
                 # Create a temporary analyzer for the custom root
-                target_analyzer = WorkspaceAnalyzer(project_root, ignore_svc=new_ignore_svc)
+                target_analyzer = WorkspaceAnalyzerService(project_root, ignore_svc=new_ignore_svc)
 
             result = target_analyzer.analyze(mode=mode, max_depth=max_depth)
             return json.dumps(result, indent=2)

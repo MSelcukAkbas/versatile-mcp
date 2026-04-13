@@ -1,6 +1,6 @@
 from typing import Any, Optional, List
 from fastmcp import FastMCP
-from config.settings import DEFAULT_MODEL
+from resources.config.settings import DEFAULT_MODEL
 
 def register_ai_tools(mcp: FastMCP, ollama_svc, prompt_svc, diag_svc, file_svc, async_task_svc: Any = None):
     @mcp.tool()

@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime
 from typing import List, Dict, Any, Optional
 from services.core.logger_service import setup_logger
-from config.settings import resolve_paths
+from resources.config.settings import resolve_paths
 
 logger = setup_logger("TaskService")
 

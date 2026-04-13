@@ -16,8 +16,8 @@ class BinService:
         self.server_home = Path(__file__).parents[2].resolve()
         
         # Binary resolution should ALWAYS be relative to the server source
-        # regardless of what the current project_root is.
-        self.bin_root = self.server_home / "bin"
+        # After reorganization, it's now in resources/bin
+        self.bin_root = self.server_home / "resources" / "bin"
             
         self.os_name = sys.platform  # 'win32', 'linux', etc.
         self.machine = platform.machine().lower()  # 'amd64', 'x86_64', 'arm64', etc.

@@ -4,7 +4,7 @@ import sys
 import platform
 import psutil
 from fastmcp import FastMCP
-from config.settings import PROJECT_ROOT, PROJECT_ID
+from resources.config.settings import PROJECT_ROOT, PROJECT_ID
 
 def register_diagnostic_tools(mcp: FastMCP, diag_svc, audit_logs_path, memory_path, PROJECT_ROOT, SERVER_HOME):
     @mcp.tool()

@@ -6,8 +6,8 @@ import tempfile
 import os
 import xml.etree.ElementTree as ET
 from services.core.logger_service import setup_logger
-from services.core.bin_service import BinService
-from config.settings import PATHS
+from services.infrastructure.system.bin_service import BinService
+from resources.config.settings import PATHS
 from typing import Tuple
 from pathlib import Path
 

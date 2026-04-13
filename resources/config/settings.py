@@ -5,22 +5,18 @@ from typing import Dict, List, Optional
 
 # --- Core Paths ---
 # SERVER_HOME is the directory where main-source resides
-SERVER_HOME = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# Now that we are in resources/config/settings.py, we need to go up 3 levels
+SERVER_HOME = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 def find_mcp_root(start_path: str) -> Optional[str]:
-    """
-    Recursively searches UP for project markers.
-    PRIORITY 1: Explicit '.mcp-root' marker (Master Override).
-    PRIORITY 2: Standard project markers (.git, package.json, etc.).
-    """
+    """Recursively searches UP for project markers."""
     current = pathlib.Path(start_path).resolve()
-    # Safety: Stop if we reach a system root or common forbidden areas
     forbidden = {"AppData", "Program Files", "Windows", "System32", "Temp", "node_modules", ".gemini"}
     
-    # --- PHASE 1: Absolute Priority (.mcp-root) ---
+    # --- PHASE 1: Absolute Priority (main.py) ---
     search_ptr = current
     while True:
-        if (search_ptr / ".mcp-root").exists():
+        if (search_ptr / "main.py").exists():
             return str(search_ptr)
         
         if any(part in search_ptr.parts for part in forbidden):
@@ -120,16 +116,16 @@ def build_paths(project_root: str, project_id: str) -> Dict[str, str]:
         "PROJECT_ROOT": project_root,
         "GLOBAL_DATA": GLOBAL_DATA_DIR,
         "LOCAL_DATA": local_data_dir,
-        "prompts": os.path.join(SERVER_HOME, "prompts"),
+        "prompts": os.path.join(SERVER_HOME, "resources", "prompts"),
         "local_memory": os.path.join(local_data_dir, "memory"),
         "global_memory": os.path.join(GLOBAL_DATA_DIR, "global", "memory"),
         "memory": os.path.join(local_data_dir, "memory"),
         "tasks": os.path.join(local_data_dir, "tasks.json"),
-        "audit_logs": os.path.join(GLOBAL_DATA_DIR, "global", "audit_logs"),  # Global, not per-project
+        "audit_logs": os.path.join(GLOBAL_DATA_DIR, "global", "audit_logs"),
         "requirements": os.path.join(SERVER_HOME, "requirements.txt"),
-        "default_ignores": os.path.join(SERVER_HOME, "config", "default_ignores.txt"),
-        "models": os.path.join(SERVER_HOME, "models"),
-        "embedding_model": os.path.join(SERVER_HOME, "models", "paraphrase-multilingual-MiniLM-L12-118M-v2-Q8_0.gguf"),
+        "default_ignores": os.path.join(SERVER_HOME, "resources", "config", "default_ignores.txt"),
+        "models": os.path.join(SERVER_HOME, "resources", "models"),
+        "embedding_model": os.path.join(SERVER_HOME, "resources", "models", "paraphrase-multilingual-MiniLM-L12-v2.I1-Q8_0.gguf"),
     }
 
 PATHS: Dict[str, str] = build_paths(PROJECT_ROOT, PROJECT_ID)

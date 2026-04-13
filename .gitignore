@@ -36,7 +36,7 @@ local_memory.db
 global_memory.db
 
 # Project Scratch & Temp
-scratch/
+internal/scratch/
 test_*.py
 .pytest_cache/
 .ruff_cache/
@@ -47,4 +47,4 @@ test_*.py
 Thumbs.db
 
 # Models
-models/*.gguf
+resources/models/*.gguf
