@@ -4,48 +4,61 @@ import sys
 import platform
 import psutil
 from fastmcp import FastMCP
+from config.settings import PROJECT_ROOT, PROJECT_ID
 
 def register_diagnostic_tools(mcp: FastMCP, diag_svc, audit_logs_path, memory_path, PROJECT_ROOT, SERVER_HOME):
     @mcp.tool()
     async def get_tool_inventory() -> str:
-        """Returns all tools with descriptions and current health status."""
+        """Returns all tools with descriptions and current health status dynamically."""
         report = await diag_svc.get_health_report()
-        inventory = {
-            "System_Health": report["components"],
-            "Intelligence & Research": {
-                "Tools": ["ask_expert", "list_models", "show_model", "web_search", "search_stackoverflow"],
-                "Description": "Local LLM consultation and global knowledge retrieval."
-            },
-            "Advanced Reasoning": {
-                "Tools": ["sequentialthinking", "clear_thinking", "create_plan", "task_mark_step"],
-                "Description": "Chain-of-thought analysis and structured plan execution."
-            },
-            "Unified Lite Memory": {
-                "Tools": ["memory_store_fact", "memory_store_user_habit", "memory_retrieve_facts", "memory_index_file", "memory_index_workspace", "memory_search_semantic"],
-                "Description": "RAG & Fact system. Facts are auto-indexed semantically."
-            },
-            "Smart File Operations": {
-                "Tools": ["read_file", "write_file", "edit_file", "list_directory", "directory_tree", "search_files", "search_semantic", "validate_syntax"],
-                "Description": "File management with syntax validation and recursive search."
-            },
-            "System & Project Monitoring": {
-                "Tools": [
-                    "system_info", "get_project_history", 
-                    "task_get_active", "simulate_diagnostic_failure", 
-                    "check_port", "manage_background_job", "remote_ssh_command"
-                ],
-                "Description": "Health checks, audit logs, and diagnostic simulations."
-            }
+        # LIVE TOOL DISCOVERY
+        live_tools = await mcp.list_tools()
+        tool_names = {t.name for t in live_tools}
+        
+        groups = {
+            "Intelligence & Research": ["ask_expert", "list_models", "show_model", "web_search", "search_stackoverflow"],
+            "Advanced Reasoning": ["sequentialthinking", "create_plan", "task_mark_step"],
+            "Unified Lite Memory": ["memory_store_fact", "memory_store_user_preference", "memory_retrieve_facts", "memory_index_file", "memory_index_workspace", "memory_forget"],
+            "Smart File Operations": ["read_file", "write_file", "multi_replace_file_content", "list_directory_with_sizes", "directory_tree", "search_files", "search_semantic_memory", "validate_syntax"],
+            "System & Project Monitoring": [
+                "system_info", "get_project_history", "workspace_summary",
+                "task_get_active", 
+                "check_port", "manage_background_job", "remote_ssh_command"
+            ]
         }
+        
+        inventory = {"System_Health": report["components"]}
+        assigned_tools = set()
+        
+        for group_name, members in groups.items():
+            # Only include if tool actually exists in live_tools
+            active_members = [m for m in members if m in tool_names]
+            if active_members:
+                inventory[group_name] = {
+                    "Tools": active_members,
+                    "Description": self_infer_desc(group_name)
+                }
+                assigned_tools.update(active_members)
+                
+        # Handle New/Unassigned Tools automatically
+        unassigned = [t for t in tool_names if t not in assigned_tools]
+        if unassigned:
+            inventory["Newly Discovered / Extensions"] = {
+                "Tools": unassigned,
+                "Description": "Dynamically detected tools without an explicit category."
+            }
+            
         return json.dumps(inventory, indent=2, ensure_ascii=False)
 
-    @mcp.tool()
-    async def simulate_diagnostic_failure(component: str) -> str:
-        """Simulate a failure for a component (e.g. 'ollama', 'rg') to test Degraded Mode."""
-        diag_svc.simulate_failure(component)
-        return f"Simulated failure for '{component}'. Run get_tool_inventory or a tool requiring it to see effects."
-
-
+    def self_infer_desc(group: str) -> str:
+        descs = {
+            "Intelligence & Research": "Local LLM consultation and global knowledge retrieval.",
+            "Advanced Reasoning": "Chain-of-thought analysis and structured plan execution.",
+            "Unified Lite Memory": "RAG & Fact system. Facts are auto-indexed semantically.",
+            "Smart File Operations": "High-performance file management with atomic multi-block edits.",
+            "System & Project Monitoring": "Deep workspace analysis, health checks, and diagnostics."
+        }
+        return descs.get(group, "Miscellaneous operations.")
 
 
     @mcp.tool()
@@ -74,6 +87,8 @@ def register_diagnostic_tools(mcp: FastMCP, diag_svc, audit_logs_path, memory_pa
                 "disk_free_gb": round(disk.free / 1e9, 2),
                 "disk_used_percent": disk.percent,
                 "cwd": os.getcwd(),
+                "active_project_root": PROJECT_ROOT,
+                "active_project_id": PROJECT_ID,
                 "shell": os.environ.get("SHELL") or os.environ.get("ComSpec", "unknown"),
                 "is_windows": platform.system() == "Windows",
                 "is_linux": platform.system() == "Linux",

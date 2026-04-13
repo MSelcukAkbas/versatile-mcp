@@ -12,10 +12,11 @@ class ThinkingService:
     Removed AuditService dependency: Uses in-memory history for loop detection.
     """
 
-    def __init__(self, memory_svc=None):
+    def __init__(self, memory_svc=None, file_svc=None):
         self.history: List[Dict[str, Any]] = []
         self.branches: Dict[str, List[Dict[str, Any]]] = {}
         self.memory_svc = memory_svc
+        self.file_svc = file_svc
         self.orchestration = OrchestrationEngine()
 
     # ------------------------------------------------------------------ #
@@ -57,11 +58,11 @@ class ThinkingService:
                 search_targets = memory_keys if memory_keys else [thought[:160]]
                 
                 for target in search_targets:
-                    # A. Semantic Search (Knowledge/Code)
-                    semantic_hits = await self.memory_svc.search_semantic(target, project_root, n_results=3)
-                    for hit in semantic_hits:
-                        path_info = hit['metadata'].get('path', 'memory')
-                        facts_result.append(f"Auto-Context: {hit['document'][:200]}... (File: {path_info})")
+                    # A. Hybrid Search (Knowledge/Code/Context)
+                    hits = await self.memory_svc.search_hybrid(target, project_root, n_results=3, file_svc=self.file_svc)
+                    for hit in hits:
+                        source_tag = "[K]" if "Keyword" in hit.get("source", "") else "[V]"
+                        facts_result.append(f"Auto-Context {source_tag}: {hit['content'][:200]}... (File: {hit['file']})")
                     
                     # B. Keyword Search (Facts - prioritized when keys are explicit)
                     if memory_keys:

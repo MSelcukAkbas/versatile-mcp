@@ -63,12 +63,3 @@ def register_reasoning_tools(mcp: FastMCP, thinking_svc, diag_svc, project_root:
             project_root=project_root
         )
         return json.dumps(result, indent=2, ensure_ascii=False)
-
-    @mcp.tool()
-    async def clear_thinking() -> str:
-        """Clear the current sequential thinking session. Call when starting a new reasoning chain."""
-        err = await diag_svc.check_tool_dependency("clear_thinking")
-        if err: return err
-
-        thinking_svc.clear_history()
-        return "Thinking session cleared."

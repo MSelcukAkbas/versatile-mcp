@@ -83,10 +83,6 @@ class FileService:
             raise ValueError(f"Invalid path: {target_path}. Error: {str(e)}")
 
     # --- Directory Operations ---
-    def list_directory(self, directory: str = ".") -> List[str]:
-        target_dir = self._resolve_path(directory)
-        return os.listdir(target_dir)
-
     def list_directory_with_sizes(self, directory: str = ".") -> List[Dict[str, Any]]:
         target_dir = self._resolve_path(directory)
         items = []
@@ -307,6 +303,31 @@ class FileService:
         with open(target_file, 'w', encoding='utf-8') as f:
             f.write(new_content)
         return f"Successfully edited {file_path}"
+
+    def multi_edit_file(self, file_path: str, chunks: List[Dict[str, str]]) -> str:
+        """Atomic multi-block replace for higher precision agentic work."""
+        target_file = self._resolve_path(file_path)
+        with open(target_file, 'r', encoding='utf-8') as f:
+            content = f.read()
+        
+        # 1. Verification Phase (Atomic)
+        for i, chunk in enumerate(chunks):
+            target = chunk.get("target")
+            if not target: continue
+            if target not in content:
+                raise ValueError(f"Error: Target chunk #{i+1} not found in {file_path}. Operation aborted for safety.")
+        
+        # 2. Execution Phase
+        new_content = content
+        for chunk in chunks:
+            target = chunk.get("target")
+            replacement = chunk.get("replacement", "")
+            if target:
+                new_content = new_content.replace(target, replacement)
+            
+        with open(target_file, 'w', encoding='utf-8') as f:
+            f.write(new_content)
+        return f"Successfully applied {len(chunks)} changes to {file_path} (Atomic)."
 
     def move_file(self, source_path: str, dest_path: str) -> str:
         src = self._resolve_path(source_path)

@@ -40,21 +40,19 @@ def register_file_tools(mcp: FastMCP, file_svc, diag_svc, doc_svc=None):
         except Exception as e: return str(e)
 
     @mcp.tool()
-    async def edit_file(file_path: str, target_content: str, replacement_content: str) -> str:
-        """Search and replace content in a file."""
-        try: return file_svc.edit_file(file_path, target_content, replacement_content)
+    async def multi_replace_file_content(file_path: str, chunks: List[dict]) -> str:
+        """
+        Apply multiple find-and-replace edits to a file in a single atomic operation.
+        Each chunk must contain 'target' (the exact text to find) and 'replacement' (the new text).
+        The operation is atomic: if any target chunk is not found, no changes are applied.
+        """
+        try: return file_svc.multi_edit_file(file_path, chunks)
         except Exception as e: return str(e)
 
     @mcp.tool()
     async def create_directory(directory: str) -> str:
         """Create a new directory."""
         try: return file_svc.create_directory(directory)
-        except Exception as e: return str(e)
-
-    @mcp.tool()
-    async def list_directory(directory: str = ".") -> str:
-        """List directory contents."""
-        try: return "Contents: " + ", ".join(file_svc.list_directory(directory))
         except Exception as e: return str(e)
 
     @mcp.tool()
@@ -87,34 +85,6 @@ def register_file_tools(mcp: FastMCP, file_svc, diag_svc, doc_svc=None):
             matches = file_svc.search_files(pattern, directory)
             return "Matches: " + ", ".join(matches) if matches else "No matches found."
         except Exception as e: return str(e)
-
-    @mcp.tool()
-    async def search_semantic(query: str, directory: str = ".", context_before: int = 5, context_after: int = 5) -> str:
-        """
-        ONLY USE THIS TOOL FOR CONCEPTUAL QUERIES. This tool searches the VECTOR DATABASE, not the live file system. If you need to find a specific variable or string in current files, use [grep_search] instead.
-
-        This tool uses a semantic retrieval engine to find files and code snippets that match the **meaning** of your query. It is ideal for answering high-level questions about the codebase or locating logic patterns. Returns results in JSON format with code blocks, file paths, and relevance scores.
-        """
-        err = await diag_svc.check_tool_dependency("search_semantic")
-        if err: return err
-        try:
-            results = file_svc.search_content(query, directory, context_before, context_after)
-            
-            primary = None
-            related = []
-            
-            if results and "error" not in results[0]:
-                primary = results[0]
-                related = results[1:]
-                
-            output = {
-                "query": query,
-                "primary_result": primary,
-                "related_results": related
-            }
-            return json.dumps(output, indent=2)
-        except Exception as e:
-            return json.dumps({"error": str(e)})
 
     @mcp.tool()
     async def get_file_info(file_path: str) -> str:
@@ -154,62 +124,3 @@ def register_file_tools(mcp: FastMCP, file_svc, diag_svc, doc_svc=None):
         except Exception as e:
             return str(e)
 
-    # --- Feature: Env File Manager ---
-
-    _SENSITIVE = re.compile(r"(secret|token|password|passwd|key|api_key|auth)", re.IGNORECASE)
-
-    @mcp.tool()
-    async def read_env_file(env_path: str) -> str:
-        """
-        Parse a .env file and return its key-value pairs.
-        Values whose keys match sensitive patterns (SECRET, TOKEN, PASSWORD, KEY…) are masked.
-        """
-        try:
-            raw = file_svc.read_text_file(env_path)
-        except Exception as e:
-            return str(e)
-
-        rows = []
-        for line in raw.splitlines():
-            stripped = line.strip()
-            if not stripped or stripped.startswith("#"):
-                continue
-            if "=" not in stripped:
-                continue
-            key, _, val = stripped.partition("=")
-            key = key.strip()
-            val = val.strip().strip('"').strip("'")
-            if _SENSITIVE.search(key):
-                val = "***"
-            rows.append(f"{key}={val}")
-        return "\n".join(rows) if rows else "(empty .env file)"
-
-    @mcp.tool()
-    async def write_env_key(env_path: str, key: str, value: str) -> str:
-        """Add or update a key in a .env file."""
-        try:
-            try:
-                raw = file_svc.read_text_file(env_path)
-            except FileNotFoundError:
-                raw = ""
-
-            lines = raw.splitlines(keepends=True)
-            found = False
-            new_lines = []
-            for line in lines:
-                if line.startswith(f"{key}=") or line.startswith(f"{key} ="):
-                    new_lines.append(f"{key}={value}\n")
-                    found = True
-                else:
-                    new_lines.append(line)
-
-            if not found:
-                if new_lines and not new_lines[-1].endswith("\n"):
-                    new_lines.append("\n")
-                new_lines.append(f"{key}={value}\n")
-
-            file_svc.write_file(env_path, "".join(new_lines))
-            action = "updated" if found else "added"
-            return f"Key '{key}' {action} in {env_path}."
-        except Exception as e:
-            return str(e)

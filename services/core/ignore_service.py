@@ -15,7 +15,7 @@ class IgnoreService:
         self._load_patterns()
 
     def _load_patterns(self):
-        """Load patterns from default file and project-specific .gitignore."""
+        """Load patterns from default file and ALL .gitignore files in the project."""
         all_patterns = []
         
         # 1. Load forced system ignores
@@ -26,24 +26,42 @@ class IgnoreService:
             "*.pyc"
         ])
 
-        # 2. Load default global ignore file
+        # 2. Load default global ignore file (system baseline)
         if os.path.exists(self.default_ignore_path):
             try:
                 with open(self.default_ignore_path, 'r', encoding='utf-8') as f:
                     all_patterns.extend(f.readlines())
-                logger.info(f"Loaded default ignore patterns from {self.default_ignore_path}")
+                logger.debug(f"Loaded default ignore patterns from {self.default_ignore_path}")
             except Exception as e:
                 logger.error(f"Failed to load default ignores: {e}")
 
-        # 3. Load project-specific .gitignore
-        gitignore_path = os.path.join(self.project_root, ".gitignore")
-        if os.path.exists(gitignore_path):
-            try:
-                with open(gitignore_path, 'r', encoding='utf-8') as f:
-                    all_patterns.extend(f.readlines())
-                logger.info(f"Loaded project-specific ignores from {gitignore_path}")
-            except Exception as e:
-                logger.error(f"Failed to load project .gitignore: {e}")
+        # 3. Dynamic Multi-Gitignore Discovery
+        # Scans for all .gitignore files in the project hierarchy
+        try:
+            for root, dirs, files in os.walk(self.project_root, topdown=True):
+                # Optimization: skip known massive ignored folders during search
+                dirs[:] = [d for d in dirs if d not in [".git", "node_modules", ".venv", "venv", "dist", "build"]]
+                
+                if ".gitignore" in files:
+                    g_path = os.path.join(root, ".gitignore")
+                    rel_dir = os.path.relpath(root, self.project_root).replace("\\", "/")
+                    prefix = "" if rel_dir == "." else f"{rel_dir}/"
+                    
+                    try:
+                        with open(g_path, 'r', encoding='utf-8') as f:
+                            for line in f:
+                                line = line.strip()
+                                if line and not line.startswith('#'):
+                                    # Adjust pattern to be relative to projected root
+                                    # If pattern starts with /, it's relative to the gitignore dir
+                                    # We prepend the relative directory path to scope it correctly
+                                    adjusted = f"{prefix}{line}"
+                                    all_patterns.append(adjusted)
+                        logger.info(f"Integrated patterns from {prefix}.gitignore")
+                    except Exception as e:
+                        logger.error(f"Failed to load {g_path}: {e}")
+        except Exception as e:
+            logger.error(f"Error during .gitignore discovery: {e}")
 
         # 4. Filter empty lines and comments
         clean_patterns = [
@@ -52,7 +70,7 @@ class IgnoreService:
         ]
 
         self.spec = pathspec.PathSpec.from_lines('gitwildmatch', clean_patterns)
-        logger.info(f"IgnoreService initialized with {len(clean_patterns)} active patterns.")
+        logger.info(f"IgnoreService initialized with {len(clean_patterns)} combined patterns.")
 
     def is_ignored(self, rel_path: str, is_dir: bool = False) -> bool:
         """

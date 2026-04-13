@@ -1,78 +1,71 @@
-# 🛠️ Versatile-MCP: The Native-Powered Swiss Army Knife for AI Agents
+# 🧠 Master-MCP: The Autonomous Reasoning Engine
 
-**Versatile-MCP** is a high-performance, native Model Context Protocol (MCP) server that transforms AI agents into operational powerhouses. Built with a **Native-First** philosophy, it provides a stable, blazingly fast toolchain that works entirely on your local machine—now with embedded AI models that eliminate the dependency on external services for core intelligence.
-
----
-
-## ⚡ Native Core Power (Works Out-of-the-Box)
-
-The heart of **Versatile-MCP** is its local operational layer. These features do **not** require Ollama or any external LLM to function at full capacity:
-
-- **🧠 Embedded AI Intelligence**: Powered by `llama-cpp-python` and local GGUF models. It handles high-quality embeddings and semantic analysis natively on your CPU.
-- **💾 Intelligent Memory Hub**: A unified SQLite + Numpy based **LiteVectorStore**. Stores facts, project knowledge, and long-term memory without requiring a heavy vector database.
-- **📂 Universal Document Indexing**: Instantly index and search through **PDF, Word (.docx), and EPUB** files alongside your source code.
-- **🚀 Blazing Fast Research**: Real-time web search and StackOverflow integration.
-- **🔍 Deep File Operations**: High-performance recursive search (`ripgrep`) and directory management.
-- **✅ Professional Validation**: Local syntax checking and linting for Python (Ruff), JS/TS (Olint/Biome), and more.
-- **📅 Structured Task Management**: Goal-oriented planning, step tracking, and project history.
+**Master-MCP** is a next-generation Model Context Protocol (MCP) server designed to transform standard AI agents into highly autonomous, self-correcting operational powerhouses. Built with a **Native-First** philosophy, it provides a blazingly fast, zero-dependency reasoning core that lives entirely on your hardware.
 
 ---
 
-## 🕵️ "What Works Without Ollama?"
+## ⚡ The Brain: Sequential Thinking & Orchestration
+Unlike traditional MCP tools, Master-MCP features a sophisticated **Reasoning Loop** powered by `sequentialthinking`. This is the intelligence layer where the magic happens:
 
-| Feature Category | Tool Examples | Status (Native Core) | status (Ollama Req) |
-| :--- | :--- | :--- | :--- |
-| **Knowledge Retrieval** | `web_search`, `search_stackoverflow` | ✅ **Active** | - |
-| **Unified Lite Memory** | `memory_store_fact`, `memory_retrieve_facts`, `memory_index_workspace`, ... | ✅ **Active** | SQLite + Hybrid |
-| **File Ops** | `search_content`, `read_file`, `edit_file` | ✅ **Active** | - |
-| **Validation** | `validate_syntax` (Python, JS, TS) | ✅ **Active** | - |
-| **Reasoning** | `sequentialthinking`, `create_plan` | ✅ **Active** | - |
-| **Advanced AI** | `ask_expert`, `list_models` | - | ⚡ **Requires Ollama** |
+- **🤖 Autonomous Orchestration**: The engine analyzes the assistant's thoughts in real-time to predict the next best tool, calculate confidence scores, and identify the root cause of errors.
+- **🧬 Hybrid Semantic Memory**: It seamlessly synthesizes **Knowledge Indexing** (Vector-based codebase search) with **Fact Retrieval** (Key-value logic) to provide the agent with deep, context-aware insights.
+- **🛡️ Risk-Aware Planning**: An integrated security barrier categorizes every action. High-risk operations (file writes, commands) trigger autonomous safety flags, while deterministic actions (reads, searches) are optimized for speed.
+- **🔄 Zero-Disk Loop Protection**: Advanced in-memory history tracking detects and breaks repetitive tool usage loops before they waste cycles.
 
 ---
 
-## 📦 Native Performance (Bundled Binaries)
+## 🚀 Key Capabilities
 
-**Versatile-MCP** comes **pre-loaded with heavy-duty tools** for Windows. No complex system configuration is needed:
-- `paraphrase-multilingual-MiniLM` (Embedded GGUF Model)
-- `ripgrep` (Fastest text search)
-- `ruff` (Fastest Python linter)
-- `oxlint` & `biome` (Modern web toolchain)
+### 🧠 Intelligence & Memory
+- **Sequential Reasoning**: Dynamic linear and branching thought chains.
+- **LiteVectorStore**: Multi-lingual semantic search powered by embedded GGUF models (no external Vector DB needed).
+- **Persistent Knowledge**: Durable fact storage with cross-session recall.
+
+### 🔍 Codebase & File Operations
+- **Deep Inspection**: Ultra-fast recursive search using bundled `ripgrep`.
+- **Smart Reading**: Native parsing for **PDF, DOCX, and EPUB** alongside source code.
+- **Precision Refactoring**: Atomic multi-block replacements and syntax validation for Python, JS, TS, and more.
+
+### 🌐 Research & Diagnostics
+- **Live Discovery**: Real-time Web Search and StackOverflow integration.
+- **System Awareness**: Deep hardware/OS diagnostics and network port checking.
+- **Remote Execution**: Secure remote command orchestration (WSL/SSH).
 
 ---
 
-## 🛠️ Getting Started
+## 📦 Native Performance (Pre-Bundled)
+Master-MCP eliminates "Dependency Hell" by shipping with high-performance binaries pre-configured for Windows:
+- **Ripgrep**: The gold standard for text search performance.
+- **Ruff**: Lighting-fast Python linting and formatting.
+- **Oxlint & Biome**: Modern, high-speed web development toolchain.
+- **Embedded Llama**: Native multi-lingual embedding models.
+
+---
+
+## 🛠️ Quick Start
 
 ### 1. Installation
 ```bash
-# Clone the repository
+# Clone the core engine
 git clone https://github.com/MSelcukAkbas/versatile-mcp.git
 cd versatile-mcp
 
-# Install dependencies
+# Setup the environment
 pip install -r requirements.txt
 ```
 
-### 2. Automatic Setup
-The first time you run a memory-related tool, Versatile-MCP will automatically download the necessary embedded model (~120MB) to the `models/` directory if it's not already present.
-
-### 3. Optional: Advanced Expert Advice
-If you want to use the `ask_expert` tool for deep architectural discussions:
-1. Install [Ollama](https://ollama.com).
-2. Download a coding model: `ollama pull qwen2.5-coder:7b`.
-
-### 4. MCP Configuration
-Add this to your MCP settings (e.g. Claude Desktop):
+### 2. Configuration
+Add Master-MCP to your MCP host settings (e.g., Claude Desktop):
 
 ```json
 {
   "mcpServers": {
-    "versatile-mcp": {
+    "master-mcp": {
       "command": "python",
-      "args": ["C:/absolute/path/to/versatile-mcp/mcp_master/main.py"],
+      "args": ["C:/absolute/path/to/mcp_master/main.py"],
       "env": {
-        "PROJECT_ROOT": "C:/Your/Current/Working/Project",
-        "STACK_EXCHANGE_API_KEY": "your_api_key_here_optional"
+        "PROJECT_ROOT": "C:/Your/Target/Project",
+        "STACK_EXCHANGE_API_KEY": "optional_key"
       }
     }
   }
@@ -81,8 +74,8 @@ Add this to your MCP settings (e.g. Claude Desktop):
 
 ---
 
-## 🛡️ Built-in "Self-Healing"
-Versatile-MCP is designed for stability. If a binary is missing or a model fails to load, the server intelligently enters **Degraded Mode**, reporting exactly what is missing and offering guidance instead of crashing.
+## 🛡️ Privacy & Security
+Master-MCP is built for **Private Reasoning**. Your thoughts, project code, and memory facts never leave your machine. The orchestration logic and semantic indexing are handled entirely offline by the embedded intelligence layer.
 
 ---
-**Maintained by MSelcukAkbas** | [GitHub Repo](https://github.com/MSelcukAkbas/versatile-mcp)
+**Maintained by MSelcukAkbas** | [Project Origin](https://github.com/MSelcukAkbas/versatile-mcp)

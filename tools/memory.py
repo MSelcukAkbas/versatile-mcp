@@ -7,7 +7,7 @@ from services.knowledge.memory_service import MemoryService
 from services.knowledge.document_service import DocumentService
 from services.orchestration.task_service import TaskService
 
-def register_memory_tools(mcp: FastMCP, memory_svc: MemoryService, task_svc: TaskService, doc_svc: DocumentService, PROJECT_ROOT: str, logger: Any, diag_svc: Any, ignore_svc: Any, async_task_svc: Any = None):
+def register_memory_tools(mcp: FastMCP, memory_svc: MemoryService, task_svc: TaskService, doc_svc: DocumentService, PROJECT_ROOT: str, logger: Any, diag_svc: Any, ignore_svc: Any, file_svc: Any, async_task_svc: Any = None):
     @mcp.tool()
     async def memory_store_fact(fact: str, project_root: str, entity: Optional[str] = None, category: Optional[str] = "general", 
                         scope: str = "local", source: str = "assistant", confidence: str = "high") -> str:
@@ -221,32 +221,39 @@ def register_memory_tools(mcp: FastMCP, memory_svc: MemoryService, task_svc: Tas
             return await indexing_logic()
 
     @mcp.tool()
-    async def memory_search_semantic(project_root: str, query: str, n_results: int = 3, scope: str = "all") -> str:
+    async def search_semantic_memory(project_root: str, query: str, n_results: int = 5, scope: str = "all", mode: str = "hybrid") -> str:
         """
-        Searches indexed project files using natural language queries.
+        Versatile hybrid search engine that combines keyword block-search (Ripgrep) and conceptual vector-search.
         
-        Uses hybrid search (vector similarity + keyword matching).
+        Modes:
+        - code: Fast keyword-based code block search.
+        - memory: Deep conceptual search via embeddings.
+        - hybrid (default): Combined results from both sources.
         
-        Use this when trying to understand how something works in the codebase
-        or when locating relevant code or documentation.
+        Use this when trying to understand how something works in the codebase or when locating relevant logic.
         
         Args:
             project_root (str): Project root to search in.
-            query (str): Natural language question or search phrase.
-            n_results (int): Number of results to return. Defaults to 3.
-            scope (str): 'local', 'global', or 'all'. Defaults to 'all'.
+            query (str): Search term or conceptual question.
+            n_results (int): Number of results per mode.
+            scope (str): 'local', 'global', or 'all'.
+            mode (str): 'code', 'memory', or 'hybrid'.
         """
-        err = await diag_svc.check_tool_dependency("memory_search_semantic")
-        if err:
-            return err
-        results = await memory_svc.search_semantic(query, n_results, scope, project_root=project_root)
+        err = await diag_svc.check_tool_dependency("search_semantic_memory")
+        if err: return err
+        
+        results = await memory_svc.search_hybrid(query, project_root, n_results, scope, mode, file_svc)
+        
+        warning = "\n\n> [!WARNING]\n> Not: Hafıza (index) güncel değilse Vektör sonuçları hatalı olabilir. Güncel sonuçlar için [memory_index_workspace] çalıştırın."
         
         final_output = {
             "project_root": project_root,
             "query": query,
-            "results": results
+            "mode": mode,
+            "results": results,
+            "note": "Vector results are based on the latest indexing. Run memory_index_workspace to refresh."
         }
-        return json.dumps(final_output, indent=2) if results else f"No matches found in project: {project_root}"
+        return json.dumps(final_output, indent=2, ensure_ascii=False) + warning
 
     @mcp.tool()
     async def memory_forget(type: str, identifier: str, project_root: str, scope: str = "local") -> str:

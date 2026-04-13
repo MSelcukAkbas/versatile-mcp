@@ -362,3 +362,58 @@ class MemoryService:
         except Exception as e:
             logger.error(f"search_hybrid fail | {e}")
             return []
+    async def search_hybrid(self, query: str, project_root: str, n_results: int = 5, scope: str = "all", mode: str = "hybrid", file_svc: Optional[Any] = None) -> List[Dict]:
+        """
+        Versatile search engine supporting three modes:
+        - code: Keyword-based block search via Ripgrep.
+        - memory: Conceptual-based vector search.
+        - hybrid: Both merged.
+        """
+        results = []
+        
+        # 1. Mode: code or hybrid (Ripgrep)
+        if mode in ["code", "hybrid"] and file_svc:
+            try:
+                # file_svc.search_content returns [{file, symbol, code_preview, score, ...}]
+                rg_hits = file_svc.search_content(query, directory=".", context_before=2, context_after=5)
+                for hit in rg_hits:
+                    if "error" in hit: continue
+                    results.append({
+                        "source": "Keyword Search (Exact Block Match)",
+                        "file": hit.get("file"),
+                        "content": hit.get("code_preview"),
+                        "score": hit.get("score", 0.8),
+                        "metadata": {
+                            "symbol": hit.get("symbol"),
+                            "line_start": hit.get("line_start"),
+                            "line_end": hit.get("line_end"),
+                            "node_type": hit.get("node_type")
+                        }
+                    })
+            except Exception as e:
+                logger.warning(f"Hybrid Keyword search failed: {e}")
+
+        # 2. Mode: memory or hybrid (Vector)
+        if mode in ["memory", "hybrid"]:
+            try:
+                # self.search_semantic returns [{id, document, distance, metadata, ...}]
+                vector_hits = await self.search_semantic(query, project_root, n_results=n_results, scope=scope)
+                for hit in vector_hits:
+                    # Normalize 'distance' to a 'score' (1 - distance)
+                    score = round(1.0 - hit.get("distance", 0.5), 2)
+                    results.append({
+                        "source": "Vector Search (Conceptual Match)",
+                        "file": hit.get("metadata", {}).get("path", "memory"),
+                        "content": hit.get("document"),
+                        "score": score,
+                        "metadata": hit.get("metadata")
+                    })
+            except Exception as e:
+                logger.warning(f"Hybrid Vector search failed: {e}")
+
+        # 3. Sort & Deduplicate
+        # Favor exact keyword matches if they exist
+        results.sort(key=lambda x: x["score"], reverse=True)
+        
+        # Simple deduplication by content/file if needed, but for now we keep them to show sources
+        return results[:n_results*2] if mode == "hybrid" else results[:n_results]

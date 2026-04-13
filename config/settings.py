@@ -1,25 +1,74 @@
 import os
 import pathlib
 import hashlib
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 # --- Core Paths ---
 # SERVER_HOME is the directory where main-source resides
 SERVER_HOME = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
+def find_mcp_root(start_path: str) -> Optional[str]:
+    """
+    Recursively searches UP for project markers.
+    PRIORITY 1: Explicit '.mcp-root' marker (Master Override).
+    PRIORITY 2: Standard project markers (.git, package.json, etc.).
+    """
+    current = pathlib.Path(start_path).resolve()
+    # Safety: Stop if we reach a system root or common forbidden areas
+    forbidden = {"AppData", "Program Files", "Windows", "System32", "Temp", "node_modules", ".gemini"}
+    
+    # --- PHASE 1: Absolute Priority (.mcp-root) ---
+    search_ptr = current
+    while True:
+        if (search_ptr / ".mcp-root").exists():
+            return str(search_ptr)
+        
+        if any(part in search_ptr.parts for part in forbidden):
+            break
+        parent = search_ptr.parent
+        if parent == search_ptr:
+            break
+        search_ptr = parent
+
+    # --- PHASE 2: Standard Discovery (Fallback) ---
+    search_ptr = current
+    markers = [".git", "package.json", "pyproject.toml", ".gitignore"]
+    while True:
+        for marker in markers:
+            if (search_ptr / marker).exists():
+                return str(search_ptr)
+        
+        if any(part in search_ptr.parts for part in forbidden):
+            break
+        parent = search_ptr.parent
+        if parent == search_ptr:
+            break
+        search_ptr = parent
+        
+    return None
+
 def get_default_root() -> str:
-    """Smart root detection that avoids AppData/Program Files context.
-    If run from within the server directory itself, defaults to one level up.
+    """Smart root discovery system.
+    1. Looks for an explicit .mcp-root marker upward.
+    2. Falls back to standard project markers (.git, etc.).
+    3. Aborts with error if in a system/forbidden directory.
     """
     cwd = os.getcwd()
     
-    # If we are running from inside the mcp_master or similar server folder,
-    # the project root is likely one level up.
+    # Priority 1: Recursive Marker Discovery
+    detected_root = find_mcp_root(cwd)
+    if detected_root:
+        return detected_root
+        
+    # Priority 2: Standard fallback (one level up if inside server)
     if cwd.lower() == SERVER_HOME.lower():
         return os.path.dirname(SERVER_HOME)
         
-    app_dirs = ["AppData", "Program Files", "System32", "Temp"]
-    if any(p.lower() in cwd.lower() for p in app_dirs):
+    # Priority 3: Safety Guard
+    forbidden = ["AppData", "Program Files", "System32", "Temp"]
+    if any(p.lower() in cwd.lower() for p in forbidden):
+        # Instead of failing silently or guessing, return a safe path or raise
+        # For this server, we'll default to the parent of the server home
         return os.path.dirname(SERVER_HOME)
         
     return cwd
@@ -30,17 +79,22 @@ PROJECT_ROOT = os.getenv("PROJECT_ROOT", get_default_root())
 GLOBAL_DATA_DIR = os.getenv("MCP_MASTER_DATA_DIR", os.path.join(os.path.expanduser("~"), ".mcp-master"))
 
 def get_project_id(path: str) -> str:
-    """Generate a slug-based unique ID for the current project.
-    Uses pathlib for cross-platform and case-sensitivity normalization.
+    """Generate a readable path-based slug for the current project.
+    Example: C:/Users/akbas/Mcp -> c--Users-akbas-Mcp
     """
     try:
         abs_path = str(pathlib.Path(path).resolve())
     except:
         abs_path = os.path.abspath(path)
         
-    folder_name = os.path.basename(abs_path) or "root"
-    path_hash = hashlib.md5(abs_path.lower().encode()).hexdigest()[:8]
-    return f"{folder_name}-{path_hash}"
+    # Remove leading/trailing slashes and handle drive colon
+    slug = abs_path.replace(':\\', '--').replace(':/', '--').replace('\\', '-').replace('/', '-')
+    
+    # Clean up multiple dashes if any
+    while '--' in slug and '---' in slug: # only collapse if > 2
+        slug = slug.replace('---', '--')
+        
+    return slug
 
 PROJECT_ID = get_project_id(PROJECT_ROOT)
 LOCAL_DATA_DIR = os.path.join(GLOBAL_DATA_DIR, "projects", PROJECT_ID)

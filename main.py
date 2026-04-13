@@ -17,7 +17,6 @@ if sys.platform == "win32":
 
 # 2. Service Imports
 # Core
-from services.core.env_service import EnvService
 from services.core.bin_service import BinService
 from services.core.diagnostic_service import DiagnosticService
 from services.core.file_service import FileService
@@ -26,6 +25,7 @@ from services.core.logger_service import setup_logger, log_startup_banner
 from services.core.process_service import ProcessService
 from services.core.ignore_service import IgnoreService
 from services.core.async_task_service import AsyncTaskService
+from services.core.workspace_analyzer import WorkspaceAnalyzer
 from services.knowledge.http_client_service import HttpClientService
 
 # AI
@@ -81,13 +81,16 @@ def bootstrap():
     logger.debug("Initializing MemoryService...")
     memory_svc = MemoryService(PATHS["local_memory"], PATHS["global_memory"], llama_svc)
     
+    logger.debug("Initializing FileService...")
+    file_svc = FileService(ALLOWED_ROOTS, ignore_svc)
+    
     logger.debug("Initializing ThinkingService (Autonomous & In-Memory Loop Detection)...")
-    thinking_svc = ThinkingService(memory_svc=memory_svc)
+    thinking_svc = ThinkingService(memory_svc=memory_svc, file_svc=file_svc)
     
     logger.info("Bootstrap | Core services initialized. Assembling mapping...")
     
     services = {
-        "file": FileService(ALLOWED_ROOTS, ignore_svc),
+        "file": file_svc,
         "ollama": ollama_svc,
         "llama": llama_svc,
         "doc": doc_svc,
@@ -106,6 +109,7 @@ def bootstrap():
         "http": HttpClientService(),
         "ignore": ignore_svc,
         "async_task": AsyncTaskService(),
+        "workspace": WorkspaceAnalyzer(PATHS["PROJECT_ROOT"], ignore_svc=ignore_svc),
     }
     logger.info(f"Bootstrap | {len(services)} services ready.")
     
