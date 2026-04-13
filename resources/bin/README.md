@@ -1,6 +1,5 @@
-# Versatile MCP Binaries
-
-This directory contains pre-compiled, local binaries used by the server's tools (Refactoring, Linting, Search).
+# Master-MCP Resources: Binaries
+This directory contains pre-compiled, local binaries used by the server's core tools (Search, Linting, Validation).
 
 ## Why Local Binaries?
 To ensure a **"Batteries-Included"** experience and high performance without needing to install dozens of system-level dependencies. These tools are the "Swiss Army Knife" parts of our server.
@@ -8,7 +7,7 @@ To ensure a **"Batteries-Included"** experience and high performance without nee
 ## Platform Support
 
 ### 🪟 Windows (Pre-bundled)
-The Windows binaries are located in `bin/win32/x64/`. They are ready to use and automatically detected.
+The Windows binaries are located in `resources/bin/win32/x64/`. They are ready to use and automatically detected.
 
 ### 🐧 Linux
 Linux binaries are **not** pre-bundled to keep the repository size manageable. Linux users should install these tools using their system's package manager:
@@ -30,7 +29,7 @@ Similar to Linux, please use `brew`:
 ---
 **Note for Windows Users:**
 The binaries are already included. You can verify they are all present by running:
-`python bin/setup_bins.py`
+`python resources/bin/setup_bins.py`
 
 **Note for Linux Users:**
 Please refer to the "Linux" section above for manual installation instructions.

@@ -37,6 +37,20 @@ class SQLiteStore:
             )
             conn.commit()
 
+    def delete_vector_by_id(self, doc_id: str):
+        """Removes a document from the vector store."""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM knowledge WHERE id = ?", (doc_id,))
+            conn.commit()
+
+    def get_all_ids(self) -> List[str]:
+        """Returns all document IDs (paths) in the knowledge store."""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT id FROM knowledge")
+            return [row[0] for row in cursor.fetchall()]
+
     def query_vector(self, query_vec: List[float], n: int = 5) -> List[Dict]:
         query_np = np.array(query_vec, dtype=np.float32)
         with sqlite3.connect(self.db_path) as conn:

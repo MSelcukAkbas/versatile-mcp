@@ -125,7 +125,7 @@ def build_paths(project_root: str, project_id: str) -> Dict[str, str]:
         "requirements": os.path.join(SERVER_HOME, "requirements.txt"),
         "default_ignores": os.path.join(SERVER_HOME, "resources", "config", "default_ignores.txt"),
         "models": os.path.join(SERVER_HOME, "resources", "models"),
-        "embedding_model": os.path.join(SERVER_HOME, "resources", "models", "paraphrase-multilingual-MiniLM-L12-v2.I1-Q8_0.gguf"),
+        "embedding_model": os.path.join(SERVER_HOME, "resources", "models", "paraphrase-multilingual-MiniLM-L12-118M-v2-Q8_0.gguf"),
     }
 
 PATHS: Dict[str, str] = build_paths(PROJECT_ROOT, PROJECT_ID)

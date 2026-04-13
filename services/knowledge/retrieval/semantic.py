@@ -25,3 +25,11 @@ class SemanticEngine:
         
         query_vec = await self.llama_svc.get_embeddings(query)
         return self.store.query_vector(query_vec, n)
+
+    async def delete_by_path(self, path: str):
+        """Removes all vectors associated with a specific file path."""
+        self.store.delete_vector_by_id(path)
+
+    def get_indexed_paths(self) -> List[str]:
+        """Returns a list of all file paths currently in the semantic memory."""
+        return self.store.get_all_ids()

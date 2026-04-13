@@ -8,8 +8,8 @@ from .templates.prompts import PromptTemplates
 class AIService:
     """Consolidated service for AI operations."""
     
-    def __init__(self, models_dir: str, prompts_dir: str):
-        self.llama = LlamaProvider(models_dir)
+    def __init__(self, model_path: str, prompts_dir: str):
+        self.llama = LlamaProvider(model_path)
         self.ollama = OllamaProvider()
         self.orchestrator = Orchestrator()
         self.thinking = ThinkingLoop()

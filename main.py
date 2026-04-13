@@ -56,7 +56,7 @@ def bootstrap():
     doc_svc = DocumentService()
 
     # 2. AI Layer
-    ai_svc = AIService(PATHS["models"], PATHS["prompts"])
+    ai_svc = AIService(PATHS["embedding_model"], PATHS["prompts"])
     ai_svc.initialize()
     
     # 3. Knowledge Layer
