@@ -1,4 +1,4 @@
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 import json
 from fastmcp import FastMCP
 from utils.decorators import mcp_timeout
@@ -34,7 +34,7 @@ def register_research_tools(mcp: FastMCP, search_svc, validator_svc, stackoverfl
         return f"SUCCESS" if valid else f"FAILURE: {msg}"
 
     @mcp.tool()
-    @mcp_timeout(seconds=10)
+    @mcp_timeout(seconds=20)
     async def web_search(query: str, max_results: int = 5) -> str:
         """
         Hybrid Technical Research Tool. 
@@ -42,15 +42,18 @@ def register_research_tools(mcp: FastMCP, search_svc, validator_svc, stackoverfl
         """
         import asyncio
         
+        # Check dependencies first (informal)
+        err_web = await diag_svc.check_tool_dependency("web_search")
+        err_so = await diag_svc.check_tool_dependency("search_stackoverflow")
+        
+        if err_web and err_so:
+            return f"Dependencies missing: {err_web}, {err_so}"
+
         # Parallel execution for speed
         tasks = [
             search_svc.search(query, max_results),
             stackoverflow_svc.search(query, max_results)
         ]
-        
-        # Check dependencies first (informal)
-        err_web = await diag_svc.check_tool_dependency("web_search")
-        err_so = await diag_svc.check_tool_dependency("search_stackoverflow")
         
         web_results, so_results = await asyncio.gather(*tasks)
         
@@ -58,10 +61,14 @@ def register_research_tools(mcp: FastMCP, search_svc, validator_svc, stackoverfl
         
         # 1. Format Stack Overflow (Technical Priority)
         if so_results and not isinstance(so_results, str):
-            output.append("# 📚 STACK OVERFLOW ÇÖZÜMLERİ\n")
+            output.append("# 🔎 STACK OVERFLOW ÇÖZÜMLERİ\n")
             for r in so_results:
-                if "error" in r: continue
-                output.append(f"## {r['title']}\nURL: {r['link']}\n### Answer Snippet\n{r.get('answer_body', 'No snippet available.')[:500]}...\n---\n")
+                if isinstance(r, dict) and "error" in r: continue
+                # Ensure 'r' is a dictionary and has required keys
+                title = r.get('title', 'No Title')
+                link = r.get('link', '#')
+                body = r.get('answer_body', 'No snippet available.')
+                output.append(f"## {title}\nURL: {link}\n### Answer Snippet\n{body[:500]}...\n---\n")
         elif isinstance(so_results, str):
             output.append(f"StackOverflow Note: {so_results}")
 
@@ -69,7 +76,10 @@ def register_research_tools(mcp: FastMCP, search_svc, validator_svc, stackoverfl
         if web_results and not isinstance(web_results, str):
             output.append("\n# 🌐 WEB KAYNAKLARI (Dokümantasyon & Rehberler)\n")
             for r in web_results:
-                output.append(f"### {r.get('title')}\nURL: {r.get('href')}\n{r.get('body')}\n")
+                title = r.get('title', 'No Title')
+                href = r.get('href', '#')
+                body = r.get('body', 'No content available.')
+                output.append(f"### {title}\nURL: {href}\n{body}\n")
         elif isinstance(web_results, str):
             output.append(f"Web Note: {web_results}")
 
@@ -77,8 +87,6 @@ def register_research_tools(mcp: FastMCP, search_svc, validator_svc, stackoverfl
             return "Hiçbir sonuç bulunamadı."
             
         return "\n".join(output)
-
-    # --- Feature: Local HTTP Client ---
 
     @mcp.tool()
     async def http_request(

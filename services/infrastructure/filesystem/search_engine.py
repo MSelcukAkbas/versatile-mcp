@@ -29,13 +29,17 @@ class SearchEngine:
         """LLM-Optimized content search using Ripgrep."""
         return await asyncio.to_thread(self._sync_search_content, query, directory)
 
-    def _sync_search_content(self, query: str, directory: str = ".") -> List[Dict[str, Any]]:
+    def _sync_search_content(self, query: str, directory: str = ".", includes: Optional[List[str]] = None) -> List[Dict[str, Any]]:
         rg_path = self.bin_service.get_binary_path("rg")
         if not rg_path: return [{"error": "Ripgrep not found."}]
 
         target_dir = os.path.join(self.project_root, directory)
         try:
-            cmd = [str(rg_path), "--json", "-i", query, target_dir]
+            cmd = [str(rg_path), "--files-with-matches", query, target_dir]
+            if includes:
+                for inc in includes:
+                    cmd.extend(["-g", f'"{inc}"'])
+            
             # Use Popen to get PID before wait()
             process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding="utf-8", errors="replace")
             

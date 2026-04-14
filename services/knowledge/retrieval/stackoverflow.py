@@ -34,6 +34,7 @@ class StackOverflowService:
             "accepted": "True",
             "order": "desc",
             "sort": "votes",
+            "tags": "python",
             "filter": "withbody", # Returns body of the question
             "pagesize": max_results
         }
