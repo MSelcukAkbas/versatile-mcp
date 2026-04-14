@@ -1,5 +1,5 @@
 import json
-from typing import Optional, Any
+from typing import Optional
 from fastmcp import FastMCP
 
 def register_memory_tools(mcp: FastMCP, memory_svc, task_svc, doc_svc, PROJECT_ROOT, logger, diag_svc, ignore_svc, file_svc, async_task_svc=None):
@@ -34,10 +34,10 @@ def register_memory_tools(mcp: FastMCP, memory_svc, task_svc, doc_svc, PROJECT_R
     @mcp.tool()
     async def search_semantic_memory(project_root: str, query: str, n_results: int = 5) -> str:
         """Advanced hybrid search across code and conceptual memory."""
-        # Get keyword hits from filesystem first
-        keyword_hits = file_svc.search_content(query, directory=project_root)
+        # Get keyword hits from filesystem first (async operation)
+        keyword_hits = await file_svc.search_content(query, directory=project_root)
         results = await memory_svc.search(query, project_root, keyword_hits=keyword_hits, n=n_results)
-        
+
         return json.dumps({
             "query": query,
             "project": project_root,

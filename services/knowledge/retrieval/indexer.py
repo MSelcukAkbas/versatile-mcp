@@ -1,8 +1,6 @@
 import os
-import json
-import hashlib
 import time
-from typing import List, Dict, Any, Optional
+from typing import Dict, Any
 from services.core.logger_service import setup_logger
 from services.infrastructure.analysis.scanner import MetadataScanner
 from resources.config.settings import save_to_registry, get_project_id
@@ -69,9 +67,11 @@ class WorkspaceIndexer:
                 
         # 3. Aggregate Stats & Update Registry
         language_stats = {}
+        # Create a temporary scanner instance for language detection
+        scanner = MetadataScanner(project_root, self.ignore)
         for full_path in files_to_index:
             ext = os.path.splitext(full_path)[1].lower()
-            lang = MetadataScanner.get_language(ext)
+            lang = scanner.get_language(ext)
             language_stats[lang] = language_stats.get(lang, 0) + 1
 
         stats = {

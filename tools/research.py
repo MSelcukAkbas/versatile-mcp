@@ -1,4 +1,4 @@
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any
 import json
 from fastmcp import FastMCP
 from utils.decorators import mcp_timeout
@@ -23,7 +23,8 @@ def register_research_tools(mcp: FastMCP, search_svc, validator_svc, stackoverfl
         Returns 'SUCCESS' if valid, or 'FAILURE: [Error Message]' on syntax error.
         """
         err = await diag_svc.check_tool_dependency("validate_syntax")
-        if err: return err
+        if err:
+            return err
 
         if not file_path and not content:
             return "FAILURE: Either 'file_path' or 'content' must be provided."
@@ -31,62 +32,53 @@ def register_research_tools(mcp: FastMCP, search_svc, validator_svc, stackoverfl
             return "FAILURE: 'extension' is required when providing 'content' without a 'file_path'."
 
         valid, msg = validator_svc.validate(content, extension, file_path)
-        return f"SUCCESS" if valid else f"FAILURE: {msg}"
+        return "SUCCESS" if valid else f"FAILURE: {msg}"
 
     @mcp.tool()
     @mcp_timeout(seconds=20)
     async def web_search(query: str, max_results: int = 5) -> str:
         """
-        Hybrid Technical Research Tool. 
+        Hybrid Technical Research Tool.
         Simultaneously searches the general web and Stack Overflow for comprehensive answers.
         """
-        import asyncio
-        
-        # Check dependencies first (informal)
-        err_web = await diag_svc.check_tool_dependency("web_search")
-        err_so = await diag_svc.check_tool_dependency("search_stackoverflow")
-        
-        if err_web and err_so:
-            return f"Dependencies missing: {err_web}, {err_so}"
+        # Minimal wrapper to avoid serialization issues
+        try:
+            # Ensure web_results and so_results are properly isolated
+            web_text = ""
+            so_text = ""
 
-        # Parallel execution for speed
-        tasks = [
-            search_svc.search(query, max_results),
-            stackoverflow_svc.search(query, max_results)
-        ]
-        
-        web_results, so_results = await asyncio.gather(*tasks)
-        
-        output = []
-        
-        # 1. Format Stack Overflow (Technical Priority)
-        if so_results and not isinstance(so_results, str):
-            output.append("# 🔎 STACK OVERFLOW ÇÖZÜMLERİ\n")
-            for r in so_results:
-                if isinstance(r, dict) and "error" in r: continue
-                # Ensure 'r' is a dictionary and has required keys
-                title = r.get('title', 'No Title')
-                link = r.get('link', '#')
-                body = r.get('answer_body', 'No snippet available.')
-                output.append(f"## {title}\nURL: {link}\n### Answer Snippet\n{body[:500]}...\n---\n")
-        elif isinstance(so_results, str):
-            output.append(f"StackOverflow Note: {so_results}")
+            try:
+                web_results = await search_svc.search(query, max_results)
+                if web_results and isinstance(web_results, list):
+                    web_text = "WEB RESULTS:\n"
+                    for idx, item in enumerate(web_results):
+                        if idx >= 2:
+                            break
+                        if isinstance(item, dict) and "error" not in item:
+                            web_text += f"- {item.get('title', 'Title')}\n"
+                            web_text += f"  {item.get('href', 'No URL')}\n\n"
+            except Exception as e:
+                web_text = f"Web search error: {str(e)}\n"
 
-        # 2. Format Web Results
-        if web_results and not isinstance(web_results, str):
-            output.append("\n# 🌐 WEB KAYNAKLARI (Dokümantasyon & Rehberler)\n")
-            for r in web_results:
-                title = r.get('title', 'No Title')
-                href = r.get('href', '#')
-                body = r.get('body', 'No content available.')
-                output.append(f"### {title}\nURL: {href}\n{body}\n")
-        elif isinstance(web_results, str):
-            output.append(f"Web Note: {web_results}")
+            try:
+                # StackOverflowService.search() is SYNC (not async), despite tool being async
+                so_results = stackoverflow_svc.search(query, max_results)
+                if so_results and isinstance(so_results, list):
+                    so_text = "\nSTACK OVERFLOW RESULTS:\n"
+                    for idx, item in enumerate(so_results):
+                        if idx >= 2:
+                            break
+                        if isinstance(item, dict) and "error" not in item:
+                            so_text += f"- {item.get('title', 'Title')}\n"
+                            so_text += f"  {item.get('link', 'No link')}\n\n"
+            except Exception as e:
+                so_text = f"StackOverflow error: {str(e)}\n"
 
-        if not output:
-            return "Hiçbir sonuç bulunamadı."
-            
-        return "\n".join(output)
+            combined = web_text + so_text
+            return combined if combined.strip() else f"No results for query: {query}"
+
+        except Exception as e:
+            return f"Search failed: {str(e)}"
 
     @mcp.tool()
     async def http_request(
