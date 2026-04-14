@@ -2,7 +2,7 @@ import os
 import pathlib
 import hashlib
 import json
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Any
 
 # --- Core Paths ---
 # SERVER_HOME is the directory where main-source resides
@@ -110,8 +110,8 @@ def load_project_registry() -> List[Dict[str, str]]:
     except Exception:
         return []
 
-def save_to_registry(project_root: str, project_id: str):
-    """Register or update a project in the central memory.json."""
+def save_to_registry(project_root: str, project_id: str, metadata: Optional[Dict[str, Any]] = None):
+    """Register or update a project in the central memory.json with metadata support."""
     registry = load_project_registry()
     abs_path = str(pathlib.Path(project_root).resolve())
     
@@ -120,15 +120,30 @@ def save_to_registry(project_root: str, project_id: str):
     for p in registry:
         if p["path"].lower() == abs_path.lower():
             p["id"] = project_id
+            if metadata:
+                if "metadata" not in p: p["metadata"] = {}
+                p["metadata"].update(metadata)
             updated = True
             break
             
     if not updated:
-        registry.append({"path": abs_path, "id": project_id})
+        entry = {"path": abs_path, "id": project_id}
+        if metadata:
+            entry["metadata"] = metadata
+        registry.append(entry)
         
     os.makedirs(os.path.dirname(PROJECT_REGISTRY_FILE), exist_ok=True)
     with open(PROJECT_REGISTRY_FILE, 'w', encoding='utf-8') as f:
         json.dump({"projects": registry}, f, indent=2)
+
+def get_project_entry(project_root: str) -> Optional[Dict[str, Any]]:
+    """Helper to get the full registry entry for a project."""
+    registry = load_project_registry()
+    abs_path = str(pathlib.Path(project_root).resolve()).lower()
+    for p in registry:
+        if p["path"].lower() == abs_path:
+            return p
+    return None
 
 def resolve_best_project_context(target_path: str) -> Optional[Dict[str, str]]:
     """

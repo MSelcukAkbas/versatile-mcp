@@ -3,7 +3,7 @@ import pathlib
 from typing import Optional, List
 from fastmcp import FastMCP
 from utils.decorators import mcp_timeout
-from resources.config.settings import PROJECT_ROOT, PROJECT_ID, ALLOWED_ROOTS
+from resources.config.settings import PROJECT_ROOT, PROJECT_ID, ALLOWED_ROOTS, get_project_entry
 from services.infrastructure.analysis import WorkspaceAnalyzerService
 from services.infrastructure.system.ignore_service import IgnoreService
 
@@ -61,6 +61,16 @@ def register_workspace_tools(mcp: FastMCP, workspace_svc):
                 target_analyzer = WorkspaceAnalyzerService(project_root, ignore_svc=new_ignore_svc)
 
             result = target_analyzer.analyze(mode=mode, max_depth=max_depth)
+            
+            # Enrich with registry metadata if available
+            entry = get_project_entry(str(target_analyzer.project_root))
+            if entry and "metadata" in entry:
+                result["ledger"] = {
+                    "last_indexed": entry["metadata"].get("last_indexed"),
+                    "file_count": entry["metadata"].get("file_count"),
+                    "languages": entry["metadata"].get("language_distribution")
+                }
+                
             return json.dumps(result, indent=2)
         except Exception as e:
             return f"Analysis failed: {str(e)}"

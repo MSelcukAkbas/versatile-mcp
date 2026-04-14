@@ -1,8 +1,11 @@
 import os
 import json
 import hashlib
+import time
 from typing import List, Dict, Any, Optional
 from services.core.logger_service import setup_logger
+from services.infrastructure.analysis.scanner import MetadataScanner
+from resources.config.settings import save_to_registry, get_project_id
 
 logger = setup_logger("Knowledge.Indexer")
 
@@ -64,4 +67,27 @@ class WorkspaceIndexer:
             except Exception as e:
                 logger.warning(f"Failed to index {full_path}: {e}")
                 
-        return {"indexed": indexed, "deleted": deleted, "skipped": skipped}
+        # 3. Aggregate Stats & Update Registry
+        language_stats = {}
+        for full_path in files_to_index:
+            ext = os.path.splitext(full_path)[1].lower()
+            lang = MetadataScanner.get_language(ext)
+            language_stats[lang] = language_stats.get(lang, 0) + 1
+
+        stats = {
+            "indexed": indexed, 
+            "deleted": deleted, 
+            "skipped": skipped,
+            "timestamp": time.strftime('%Y-%m-%dT%H:%M:%S'),
+            "languages": language_stats
+        }
+
+        # Update central registry
+        project_id = get_project_id(project_root)
+        save_to_registry(project_root, project_id, metadata={
+            "last_indexed": stats["timestamp"],
+            "file_count": len(files_to_index),
+            "language_distribution": language_stats
+        })
+                
+        return stats
