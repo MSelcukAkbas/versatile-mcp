@@ -2,6 +2,7 @@ import json
 import pathlib
 from typing import Optional, List
 from fastmcp import FastMCP
+from utils.decorators import mcp_timeout
 from resources.config.settings import PROJECT_ROOT, PROJECT_ID, ALLOWED_ROOTS
 from services.infrastructure.analysis import WorkspaceAnalyzerService
 from services.infrastructure.system.ignore_service import IgnoreService
@@ -9,6 +10,7 @@ from services.infrastructure.system.ignore_service import IgnoreService
 def register_workspace_tools(mcp: FastMCP, workspace_svc):
     
     @mcp.tool()
+    @mcp_timeout(seconds=90)
     async def workspace_summary(
         project_root: Optional[str] = None, 
         mode: str = "fast", 

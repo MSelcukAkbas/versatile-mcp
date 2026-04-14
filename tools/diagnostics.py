@@ -71,13 +71,6 @@ def register_diagnostic_tools(mcp: FastMCP, diag_svc, audit_logs_path, memory_pa
             }
             return json.dumps(info, indent=2, ensure_ascii=False)
 
-    @mcp.tool()
-    @mcp_timeout(seconds=90)
-    async def workspace_summary(mode: str = "fast", max_depth: int = 3) -> str:
-        """
-        Comprehensive workspace analyzer tool. 
-        Extracts structure, technology, entrypoints, modules, and multi-factor hotspots.
-        """
-        return await diag_svc.get_workspace_summary(mode, max_depth)
+
 
 
