@@ -6,8 +6,9 @@ from pathlib import Path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from fastmcp import FastMCP
-from resources.config.settings import PATHS, ALLOWED_ROOTS, OLLAMA_HOST, STACK_EXCHANGE_API_KEY, ensure_directories
+from resources.config.settings import PROJECT_ROOT, PATHS, SERVER_HOME, ALLOWED_ROOTS, STACK_EXCHANGE_API_KEY, ensure_directories
 from services.core.logger_service import setup_logger, log_startup_banner
+from utils.decorators import set_process_service_reference
 
 # Modular Service Imports - Infrastructure
 from services.infrastructure.filesystem import FileSystemService
@@ -46,9 +47,10 @@ def bootstrap():
     # 1. Infrastructure Layer
     bin_svc = BinService(PATHS["PROJECT_ROOT"])
     ignore_svc = IgnoreService(PATHS["default_ignores"], PATHS["PROJECT_ROOT"])
+    process_svc = ProcessService(Path(PATHS["SERVER_HOME"]) / ".mcp-master")
     validation_svc = ValidationService()
     
-    file_svc = FileSystemService(ALLOWED_ROOTS, ignore_svc, bin_svc)
+    file_svc = FileSystemService(ALLOWED_ROOTS, ignore_svc, bin_svc, process_svc=process_svc)
     workspace_svc = WorkspaceAnalyzerService(PATHS["PROJECT_ROOT"], ignore_svc)
     search_svc = SearchService()
     task_svc = TaskService(PATHS["tasks"])
@@ -76,10 +78,13 @@ def bootstrap():
         "planner": planner_svc,
         "doc": doc_svc,
         "stackoverflow": StackOverflowService(STACK_EXCHANGE_API_KEY),
-        "process": ProcessService(Path(PATHS["SERVER_HOME"]) / ".mcp-master"),
+        "process": process_svc,
         "async_task": AsyncTaskService(),
         "logger": logger
     }
+    
+    # Register process service to the Reaper decorator
+    set_process_service_reference(process_svc)
 
     # Backward compatibility mapping for old tools
     services["llama"] = ai_svc.llama

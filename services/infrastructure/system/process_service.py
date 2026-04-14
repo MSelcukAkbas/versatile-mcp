@@ -31,7 +31,45 @@ class ProcessService:
         
         # Store active processes: task_id -> {process_obj, start_time, command, log_file, buffer, lock}
         self.active_processes: Dict[str, Dict[str, Any]] = {}
+        
+        # Store process IDs for each request: request_id -> [pid1, pid2, ...]
+        self.request_pids: Dict[str, List[int]] = {}
+        self.lock = threading.Lock() # Global lock for safe dict access
+        
         logger.info(f"ProcessService initialized. Logs directory: {self.logs_dir}")
+
+    def register_process_to_request(self, pid: int):
+        """Links a PID to the current async request context."""
+        from utils.decorators import current_request_id
+        req_id = current_request_id.get()
+        if req_id:
+            with self.lock:
+                if req_id not in self.request_pids:
+                    self.request_pids[req_id] = []
+                self.request_pids[req_id].append(pid)
+                logger.debug(f"PID {pid} registered to request {req_id}")
+
+    def kill_processes_for_request(self, request_id: str):
+        """The Reaper core: Kill all processes associated with a request ID."""
+        with self.lock:
+            pids = self.request_pids.get(request_id, [])
+            if not pids:
+                return
+            
+            logger.info(f"REAPER: Killing {len(pids)} processes for request {request_id}")
+            for pid in pids:
+                try:
+                    proc = psutil.Process(pid)
+                    # Kill offspring first
+                    for child in proc.children(recursive=True):
+                        try: child.kill()
+                        except: pass
+                    proc.kill()
+                    logger.debug(f"Killed PID {pid}")
+                except (psutil.NoSuchProcess, psutil.AccessDenied):
+                    pass
+            
+            del self.request_pids[request_id]
 
     def _read_stream_sync(self, stream, task_id, log_file):
         """Monitor a stream in a separate thread and write to log file + buffer."""
@@ -60,6 +98,9 @@ class ProcessService:
         """
         Runs a command in the background, waits 3 seconds for initial feedback.
         """
+        # Periodic cleanup of old completed tasks
+        self.cleanup_stale_tasks()
+        
         task_id = f"bg_{uuid.uuid4().hex[:8]}"
         log_file = self.logs_dir / f"{task_id}.log"
         
@@ -76,8 +117,10 @@ class ProcessService:
                 bufsize=1, # Line buffered
                 universal_newlines=False, # Use bytes for the thread reader
                 start_new_session=True if os.name != "nt" else False,
-                creationflags=subprocess.CREATE_NEW_PROCESS_GROUP if os.name == "nt" else 0
             )
+            
+            # Register PID to current request context for the Reaper
+            self.register_process_to_request(process.pid)
             
             self.active_processes[task_id] = {
                 "process": process,
@@ -207,3 +250,21 @@ class ProcessService:
                 "start_time": time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(info["start_time"]))
             })
         return summary
+
+    def cleanup_stale_tasks(self, max_age_seconds: int = 3600):
+        """Removes completed tasks older than max_age_seconds from memory."""
+        now = time.time()
+        tasks_to_remove = []
+        for task_id, info in self.active_processes.items():
+            exit_code = info["process"].poll()
+            if exit_code is not None:
+                # Finished. Check age.
+                if now - info["start_time"] > max_age_seconds:
+                    tasks_to_remove.append(task_id)
+        
+        for task_id in tasks_to_remove:
+            try:
+                del self.active_processes[task_id]
+                logger.info(f"Cleaned up stale task memory: {task_id}")
+            except KeyError:
+                pass

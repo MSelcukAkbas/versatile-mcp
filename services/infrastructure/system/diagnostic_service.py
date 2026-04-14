@@ -110,8 +110,11 @@ class DiagnosticService:
                 }
         return {"port": port, "in_use": False, "pid": None, "process": None}
 
-    def find_process(self, name: str) -> List[Dict[str, Any]]:
+    async def find_process(self, name: str) -> List[Dict[str, Any]]:
         """Find running processes whose name contains *name* (case-insensitive)."""
+        return await asyncio.to_thread(self._sync_find_process, name)
+
+    def _sync_find_process(self, name: str) -> List[Dict[str, Any]]:
         try:
             import psutil
         except ImportError:

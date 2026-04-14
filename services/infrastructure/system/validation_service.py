@@ -8,7 +8,7 @@ import xml.etree.ElementTree as ET
 from services.core.logger_service import setup_logger
 from services.infrastructure.system.bin_service import BinService
 from resources.config.settings import PATHS
-from typing import Tuple
+from typing import Tuple, Optional
 from pathlib import Path
 
 logger = setup_logger("ValidationService")
@@ -38,15 +38,19 @@ class ValidationService:
             logger.error(f"Error running {tool_name}: {e}")
             return -1, "", str(e)
 
-    def _validate_js_ts(self, content: str, ext: str) -> Tuple[bool, str]:
+    def _validate_js_ts(self, content: str, ext: str, file_path: Optional[str] = None) -> Tuple[bool, str]:
         """Validate JS/TS using Oxlint (primary) or Biome (fallback)."""
-        with tempfile.NamedTemporaryFile(suffix=f".{ext}", delete=False, mode='w', encoding='utf-8') as tf:
-            tf.write(content)
-            temp_path = tf.name
+        temp_path = None
+        if not file_path:
+            with tempfile.NamedTemporaryFile(suffix=f".{ext}", delete=False, mode='w', encoding='utf-8') as tf:
+                tf.write(content)
+                temp_path = tf.name
+        
+        target_path = file_path or temp_path
 
         try:
             # Try Oxlint first
-            rc, stdout, stderr = self._run_tool("oxlint", ["-D", "correctness", "--format", "json", temp_path])
+            rc, stdout, stderr = self._run_tool("oxlint", ["-D", "correctness", "--format", "json", target_path])
             
             if rc != -1 and stdout:
                 try:
@@ -62,9 +66,8 @@ class ValidationService:
                     pass
 
             # Fallback to Biome if available
-            rc, stdout, stderr = self._run_tool("biome", ["lint", "--format", "json", temp_path])
+            rc, stdout, stderr = self._run_tool("biome", ["lint", "--format", "json", target_path])
             if rc != -1:
-                # Biome parsing logic would go here
                 if rc == 0:
                     return True, "SYNTAX OK (Biome)"
                 return False, f"Biome detected errors. {stderr[:100]}"
@@ -72,14 +75,18 @@ class ValidationService:
             return False, "Validation tools (oxlint/biome) failed or not found."
             
         finally:
-            if os.path.exists(temp_path):
+            if temp_path and os.path.exists(temp_path):
                 os.remove(temp_path)
 
-    def _validate_python_ruff(self, content: str) -> Tuple[bool, str]:
+    def _validate_python_ruff(self, content: str, file_path: Optional[str] = None) -> Tuple[bool, str]:
         """Validate Python using Ruff (beyond simple ast.parse)."""
-        with tempfile.NamedTemporaryFile(suffix=".py", delete=False, mode='w', encoding='utf-8') as tf:
-            tf.write(content)
-            temp_path = tf.name
+        temp_path = None
+        if not file_path:
+            with tempfile.NamedTemporaryFile(suffix=".py", delete=False, mode='w', encoding='utf-8') as tf:
+                tf.write(content)
+                temp_path = tf.name
+        
+        target_path = file_path or temp_path
 
         try:
             # ruff check --output-format json --cache-dir <central_path> <path>
@@ -88,12 +95,16 @@ class ValidationService:
                 "check", 
                 "--output-format", "json", 
                 "--cache-dir", cache_dir,
-                temp_path
+                target_path
             ])
             
             if rc == -1:
                 # If ruff not found, fallback to standard ast.parse
-                ast.parse(content)
+                if content:
+                    ast.parse(content)
+                else:
+                    with open(file_path, 'r', encoding='utf-8') as f:
+                        ast.parse(f.read())
                 return True, "SYNTAX OK (AST fallback)"
 
             if rc == 0:
@@ -113,28 +124,48 @@ class ValidationService:
         except Exception as e:
             return False, str(e)
         finally:
-            if os.path.exists(temp_path):
+            if temp_path and os.path.exists(temp_path):
                 os.remove(temp_path)
 
-    def validate(self, content: str, ext: str) -> Tuple[bool, str]:
+    def validate(self, content: Optional[str] = None, ext: Optional[str] = None, file_path: Optional[str] = None) -> Tuple[bool, str]:
         """
-        Validate content based on extension.
+        Validate content or file based on extension.
         Returns (is_valid, message).
         """
-        ext = ext.lower().strip('.')
-        logger.info(f"validate() | ext=.{ext} | content_length={len(content)} chars")
+        if file_path:
+            ext = Path(file_path).suffix.lower().strip('.')
+            if not content:
+                # If no content provided, we'll read for local-only validators (json, yaml)
+                # But for tools like Ruff/Oxlint, we use the path directly.
+                pass
+        elif ext:
+            ext = ext.lower().strip('.')
+        else:
+            return False, "Either file_path or extension (with content) must be provided."
+
+        logger.info(f"validate() | ext=.{ext} | file_path={file_path} | has_content={bool(content)}")
 
         try:
+            # Tool-based validators (don't necessarily need to read content here)
+            if ext == "py":
+                return self._validate_python_ruff(content, file_path)
+            elif ext in ["js", "mjs", "cjs", "ts", "mts", "cts"]:
+                return self._validate_js_ts(content, ext, file_path)
+
+            # Manual string-based validators (need content)
+            if not content and file_path:
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    content = f.read()
+            
+            if not content:
+                return False, "Content is empty for format requiring content-based validation."
+
             if ext == "json":
                 json.loads(content)
             elif ext in ["yaml", "yml"]:
                 yaml.safe_load(content)
-            elif ext == "py":
-                return self._validate_python_ruff(content)
             elif ext == "xml":
                 ET.fromstring(content)
-            elif ext in ["js", "mjs", "cjs", "ts", "mts", "cts"]:
-                return self._validate_js_ts(content, ext)
             else:
                 logger.warning(f"validate() | Unsupported extension: .{ext}")
                 return False, f"Unsupported extension: {ext}"

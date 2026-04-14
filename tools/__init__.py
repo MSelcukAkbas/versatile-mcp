@@ -29,7 +29,8 @@ def register_all_tools(mcp, services, paths):
         paths['audit_logs'], 
         paths['memory'], 
         paths['PROJECT_ROOT'], 
-        paths['SERVER_HOME']
+        paths['SERVER_HOME'],
+        services.get('process')
     )
     
     if 'process' in services:

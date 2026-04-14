@@ -10,12 +10,13 @@ class FileSystemService:
     """Consolidated service for filesystem operations using modular components."""
     
     def __init__(self, allowed_roots: List[str], ignore_svc: Optional[Any] = None, 
-                 bin_service: Optional[Any] = None, doc_svc: Optional[Any] = None):
+                 bin_service: Optional[Any] = None, doc_svc: Optional[Any] = None, process_svc: Optional[Any] = None):
         self.security = SecurityManager(allowed_roots)
         self.io = IOManager()
         self.reader = SmartReader(doc_svc)
         self.patcher = Patcher()
         self.ignore_svc = ignore_svc
+        self.process_svc = process_svc
         
         # Explorer integration
         from services.infrastructure.analysis.explorer import Explorer
@@ -23,7 +24,7 @@ class FileSystemService:
         
         # Search engine depends on BinService
         if bin_service:
-            self.searcher = SearchEngine(bin_service, str(self.security.allowed_roots[0]))
+            self.searcher = SearchEngine(bin_service, str(self.security.allowed_roots[0]), process_service=process_svc)
         else:
             self.searcher = None
 
@@ -55,13 +56,13 @@ class FileSystemService:
         resolved = self.security.resolve_path(directory)
         return self.io.list_directory(resolved)
 
-    def search_files(self, pattern: str, directory: str = ".") -> List[str]:
+    async def search_files(self, pattern: str, directory: str = ".") -> List[str]:
         if not self.searcher: return []
-        return self.searcher.search_files(pattern, directory)
+        return self.searcher.search_files(pattern, directory) # os.walk still sync but small
 
-    def search_content(self, query: str, directory: str = ".") -> List[Dict[str, Any]]:
+    async def search_content(self, query: str, directory: str = ".") -> List[Dict[str, Any]]:
         if not self.searcher: return [{"error": "Search engine not initialized."}]
-        raw_matches = self.searcher.search_content(query, directory)
+        raw_matches = await self.searcher.search_content(query, directory)
         results = []
         for m in raw_matches:
             if "error" in m: continue

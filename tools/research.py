@@ -1,12 +1,18 @@
-import json
 from typing import Optional, Dict, Any
+import json
 from fastmcp import FastMCP
+from utils.decorators import mcp_timeout
 
 def register_research_tools(mcp: FastMCP, search_svc, validator_svc, stackoverflow_svc, diag_svc, http_svc=None):  # noqa: E501
     @mcp.tool()
-    async def validate_syntax(content: str, extension: str) -> str:
+    @mcp_timeout(seconds=15)
+    async def validate_syntax(content: Optional[str] = None, extension: Optional[str] = None, file_path: Optional[str] = None) -> str:
         """
         Validates code syntax using local high-performance engines (Ruff, Oxlint, Biome).
+        
+        Usage Modes:
+        1. File Mode: Provide 'file_path'. Extension is auto-resolved.
+        2. Content Mode: Provide 'content' and 'extension'.
         
         Supported Extensions:
         - Python: .py
@@ -19,10 +25,16 @@ def register_research_tools(mcp: FastMCP, search_svc, validator_svc, stackoverfl
         err = await diag_svc.check_tool_dependency("validate_syntax")
         if err: return err
 
-        valid, msg = validator_svc.validate(content, extension)
+        if not file_path and not content:
+            return "FAILURE: Either 'file_path' or 'content' must be provided."
+        if content and not extension and not file_path:
+            return "FAILURE: 'extension' is required when providing 'content' without a 'file_path'."
+
+        valid, msg = validator_svc.validate(content, extension, file_path)
         return f"SUCCESS" if valid else f"FAILURE: {msg}"
 
     @mcp.tool()
+    @mcp_timeout(seconds=10)
     async def web_search(query: str, max_results: int = 5) -> str:
         """
         Hybrid Technical Research Tool. 

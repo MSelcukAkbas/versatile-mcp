@@ -1,4 +1,5 @@
 import os
+import asyncio
 import requests
 from pathlib import Path
 from tqdm import tqdm
@@ -50,7 +51,8 @@ class LlamaProvider:
             return [0.0] * 384 # Fallback zero vector if failed
             
         try:
-            res = self.client.create_embedding(text)
+            # Offload heavy CPU work to a thread
+            res = await asyncio.to_thread(self.client.create_embedding, text)
             return res['data'][0]['embedding']
         except Exception as e:
             logger.error(f"Embedding generation failed: {e}")

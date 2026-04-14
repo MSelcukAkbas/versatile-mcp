@@ -3,6 +3,7 @@ import os
 import re
 from typing import Optional, List
 from fastmcp import FastMCP
+from utils.decorators import mcp_timeout
 
 def register_file_tools(mcp: FastMCP, file_svc, diag_svc, doc_svc=None):
     @mcp.tool()
@@ -52,6 +53,7 @@ def register_file_tools(mcp: FastMCP, file_svc, diag_svc, doc_svc=None):
 
 
     @mcp.tool()
+    @mcp_timeout(seconds=30)
     async def directory_tree(directory: str = ".", max_depth: int = 3) -> str:
         """
         Returns a flattened 'Indexed File Graph' of the directory, optimized for AI reasoning.
@@ -62,12 +64,13 @@ def register_file_tools(mcp: FastMCP, file_svc, diag_svc, doc_svc=None):
 
 
     @mcp.tool()
+    @mcp_timeout(seconds=10)
     async def search_files(pattern: str, directory: str = ".") -> str:
         """Search for files matching a pattern."""
         err = await diag_svc.check_tool_dependency("search_files")
         if err: return err
         try:
-            matches = file_svc.search_files(pattern, directory)
+            matches = await file_svc.search_files(pattern, directory)
             return "Matches: " + ", ".join(matches) if matches else "No matches found."
         except Exception as e: return str(e)
 
