@@ -150,6 +150,14 @@ Versatile-Mcp'yi bir MCP istemcisine (örn: Claude Desktop) kaydetmek için `mcp
 
 ---
 
+## 🧩 İlişkili Projeler
+
+Versatile-Mcp, aşağıdaki **ayrı ve bağımsız** uzmanlık kütüphanesi ile tam entegre çalışır:
+
+- [**Versatile Skills**](https://github.com/MSelcukAkbas/versatile-skills) — Ajanların uzmanlaşmasını sağlayan 30+ yapılandırılmış yetenek ve iş akışı içeren ana zeka katmanı.
+
+---
+
 ## 👨‍💻 Geliştirici Rehberi
 
 Yeni bir araç veya sunucu eklemek için:

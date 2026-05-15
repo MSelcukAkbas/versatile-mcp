@@ -4,7 +4,7 @@
 fastmcp==3.2.1
 mcp==1.27.0
 pydantic==2.12.5
-python-dotenv==1.0.1
+python-dotenv>=1.1.0
 
 # Intelligence & Search (Brain)
 llama-cpp-python==0.3.20
