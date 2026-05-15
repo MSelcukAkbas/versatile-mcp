@@ -1,106 +1,108 @@
-import os
 import sys
-from pathlib import Path
-
-# Ensure the project root is in sys.path
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-
+import os
+import logging
+from typing import Optional
+from dotenv import load_dotenv
 from fastmcp import FastMCP
-from resources.config.settings import PROJECT_ROOT, PATHS, SERVER_HOME, ALLOWED_ROOTS, STACK_EXCHANGE_API_KEY, ensure_directories
-from services.core.logger_service import setup_logger, log_startup_banner
-from utils.decorators import set_process_service_reference
 
-# Modular Service Imports - Infrastructure
-from services.infrastructure.filesystem import FileSystemService
-from services.infrastructure.analysis import WorkspaceAnalyzerService
-from services.infrastructure.system.bin_service import BinService
-from services.infrastructure.system.ignore_service import IgnoreService
-from services.infrastructure.system.diagnostic_service import DiagnosticService
-from services.infrastructure.system.process_service import ProcessService
-from services.infrastructure.system.validation_service import ValidationService
-from services.infrastructure.system.async_task_service import AsyncTaskService
-from services.infrastructure.system.search_service import SearchService
-from services.infrastructure.system.task_service import TaskService
-from services.infrastructure.system.planner_service import PlannerService
-from services.infrastructure.system.document_service import DocumentService
+# 1. Path Setup (Ensure core and servers are importable)
+root_path = os.path.dirname(os.path.abspath(__file__))
+if root_path not in sys.path:
+    sys.path.insert(0, root_path)
 
-# Modular Service Imports - AI & Knowledge
-from services.ai import AIService
-from services.knowledge import KnowledgeBaseService
-from services.knowledge.retrieval.stackoverflow import StackOverflowService
+# Add master path specifically for its internal logic
+master_path = os.path.join(root_path, "servers", "master")
+if master_path not in sys.path:
+    sys.path.insert(0, master_path)
 
-# Windows UTF-8 Enforcement
-if sys.platform == "win32":
-    sys.stdout.reconfigure(encoding='utf-8')
-    sys.stderr.reconfigure(encoding='utf-8')
+# Redirect default stdout to stderr for protocol safety
+_real_stdout = sys.stdout
+sys.stdout = sys.stderr
 
-def bootstrap():
-    """Build and return the modular FastMCP server."""
-    logger = setup_logger("MasterMCP")
-    log_startup_banner(logger)
-    
-    ensure_directories()
-    mcp = FastMCP("Master-MCP-Modular")
-    
-    logger.info("Bootstrap | Initializing Micro-Modular Architecture...")
+# 4. Initialization (MUST BE BEFORE IMPORTS)
+load_dotenv(os.path.join(root_path, ".env"))
 
-    # 1. Infrastructure Layer
-    bin_svc = BinService(PATHS["PROJECT_ROOT"])
-    ignore_svc = IgnoreService(PATHS["default_ignores"], PATHS["PROJECT_ROOT"])
-    process_svc = ProcessService(Path(PATHS["SERVER_HOME"]) / ".mcp-master")
-    validation_svc = ValidationService()
-    
-    file_svc = FileSystemService(ALLOWED_ROOTS, ignore_svc, bin_svc, process_svc=process_svc)
-    workspace_svc = WorkspaceAnalyzerService(PATHS["PROJECT_ROOT"], ignore_svc)
-    search_svc = SearchService()
-    task_svc = TaskService(PATHS["tasks"])
-    planner_svc = PlannerService()
-    doc_svc = DocumentService()
+# 2. Core Imports
+from core.config import Config, validate_project_root
+from core.helpers.ignores import IgnoreService
+from core.helpers.llama_engine.provider import LlamaProvider
 
-    # 2. AI Layer
-    ai_svc = AIService(PATHS["embedding_model"], PATHS["prompts"])
-    ai_svc.initialize()
-    
-    # 3. Knowledge Layer
-    knowledge_svc = KnowledgeBaseService(PATHS["local_memory"], PATHS["global_memory"], ai_svc)
+# 3. Server-Specific Imports
+# Brain
+from servers.brain.services.memory.service import MemoryService
+from servers.brain.services.reasoning.thinking import ThinkingLoop
+from servers.brain.services.analysis.service import WorkspaceAnalyzerService
+from servers.brain.tools.reasoning import register_reasoning_tools
+from servers.brain.tools.memory import register_memory_tools
+from servers.brain.tools.workspace import register_workspace_tools
+from servers.brain.tools.intelligence import register_intelligence_tools
 
-    services = {
-        "file": file_svc,
-        "workspace": workspace_svc,
-        "ai": ai_svc,
-        "knowledge": knowledge_svc,
-        "bin": bin_svc,
-        "ignore": ignore_svc,
-        "diag": DiagnosticService(ai_svc.ollama, bin_svc),
-        "validation": validation_svc,
-        "search": search_svc,
-        "task": task_svc,
-        "planner": planner_svc,
-        "doc": doc_svc,
-        "stackoverflow": StackOverflowService(STACK_EXCHANGE_API_KEY),
-        "process": process_svc,
-        "async_task": AsyncTaskService(),
-        "logger": logger
-    }
-    
-    # Register process service to the Reaper decorator
-    set_process_service_reference(process_svc)
+# Master
+from resources.config.settings import PATHS, ALLOWED_ROOTS, ensure_directories
+from servers.master.services.core.logger_service import setup_logger
+from servers.master.services.filesystem import FileSystemService
+from servers.master.services.system.bin_service import BinService
+from servers.master.services.system.diagnostic_service import DiagnosticService
+from servers.master.services.system.validation_service import ValidationService
+from servers.master.services.system.document_service import DocumentService
+from servers.master.tools import register_all_tools
 
-    # Backward compatibility mapping for old tools
-    services["llama"] = ai_svc.llama
-    services["ollama"] = ai_svc.ollama
-    services["memory"] = knowledge_svc
-    services["thinking"] = ai_svc.thinking
-    services["prompt"] = ai_svc.prompts
-    services["validator"] = validation_svc
+# Remote
+from servers.remote.main import register_remote_tools
 
-    # Register All Tools
-    from tools import register_all_tools
-    register_all_tools(mcp, services, PATHS)
-    
-    logger.info(f"Bootstrap | Modular Architecture Ready. Project is Lean & Mean.")
-    return mcp, logger
+# 5. Global Logging Setup
+logging.basicConfig(
+    level=logging.INFO, 
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    stream=sys.stderr,
+    force=True
+)
+logger = logging.getLogger("Versatile-Mcp-Unified")
+logging.getLogger("mcp").setLevel(logging.WARNING)
+
+Config.setup()
+ensure_directories()
+
+logger.info(f"Initialized with DATA_DIR: {Config.DATA_DIR}")
+logger.info(f"Initialized with MODEL_PATH: {Config.MODEL_PATH}")
+
+# 6. FastMCP App Instance
+mcp = FastMCP("Versatile-Mcp")
+
+# 7. Initialize & Register ALL Services
+# --- Shared Helpers ---
+llama_engine = LlamaProvider(Config.MODEL_PATH, n_gpu_layers=0, n_threads=4)
+ignore_svc = IgnoreService(project_root=".", default_ignore_path=PATHS["default_ignores"])
+
+# --- Brain Cluster ---
+memory_svc = MemoryService(Config.DATA_DIR, llama_engine)
+analyzer_svc = WorkspaceAnalyzerService(ignore_svc)
+thinking_loop = ThinkingLoop(memory_svc=memory_svc, llama_svc=llama_engine)
+
+register_intelligence_tools(mcp, memory_svc, analyzer_svc, ignore_svc, validate_project_root)
+register_reasoning_tools(mcp, thinking_loop, validate_project_root)
+register_memory_tools(mcp, memory_svc, analyzer_svc, ignore_svc, validate_project_root)
+register_workspace_tools(mcp, memory_svc, ignore_svc, analyzer_svc, validate_project_root)
+
+# --- Master Cluster ---
+bin_svc = BinService(PATHS["PROJECT_ROOT"])
+validation_svc = ValidationService()
+file_svc = FileSystemService(ALLOWED_ROOTS, ignore_svc, bin_svc)
+doc_svc = DocumentService()
+diag_svc = DiagnosticService(bin_svc)
+
+master_services = {
+    "file": file_svc, "bin": bin_svc, "ignore": ignore_svc,
+    "diag": diag_svc, "validator": validation_svc,
+    "doc": doc_svc, "logger": logger
+}
+register_all_tools(mcp, master_services, PATHS)
+
+# --- Remote Cluster ---
+register_remote_tools(mcp, root_path)
+
+logger.info("Versatile-Mcp | Unified Suite | 13+ Tools Loaded | Ready.")
 
 if __name__ == "__main__":
-    mcp_app, app_logger = bootstrap()
-    mcp_app.run()
+    sys.stdout = _real_stdout
+    mcp.run(show_banner=False)

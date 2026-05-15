@@ -188,7 +188,6 @@ def build_paths(project_root: str, project_id: str) -> Dict[str, str]:
         "PROJECT_ROOT": project_root,
         "GLOBAL_DATA": GLOBAL_DATA_DIR,
         "LOCAL_DATA": local_data_dir,
-        "prompts": os.path.join(SERVER_HOME, "resources", "prompts"),
         "local_memory": os.path.join(local_data_dir, "memory"),
         "global_memory": os.path.join(GLOBAL_DATA_DIR, "global", "memory"),
         "memory": os.path.join(local_data_dir, "memory"),
@@ -196,8 +195,6 @@ def build_paths(project_root: str, project_id: str) -> Dict[str, str]:
         "audit_logs": os.path.join(GLOBAL_DATA_DIR, "global", "audit_logs"),
         "requirements": os.path.join(SERVER_HOME, "requirements.txt"),
         "default_ignores": os.path.join(SERVER_HOME, "resources", "config", "default_ignores.txt"),
-        "models": os.path.join(SERVER_HOME, "resources", "models"),
-        "embedding_model": os.path.join(SERVER_HOME, "resources", "models", "paraphrase-multilingual-MiniLM-L12-118M-v2-Q8_0.gguf"),
     }
 
 PATHS: Dict[str, str] = build_paths(PROJECT_ROOT, PROJECT_ID)
@@ -214,10 +211,9 @@ def resolve_paths(project_root: str) -> Dict[str, str]:
     return build_paths(project_root, project_id)
 
 # --- Service Settings ---
-OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://localhost:11434")
-DEFAULT_MODEL = os.getenv("DEFAULT_MODEL", "qwen2.5-coder:7b-instruct-q4_K_M")
 MAX_INDEX_FILE_SIZE = 5 * 1024 * 1024  # 5 MB
 STACK_EXCHANGE_API_KEY = os.getenv("STACK_EXCHANGE_API_KEY")
+
 
 # --- Directory Initialization ---
 def ensure_directories(paths: Dict[str, str] | None = None):

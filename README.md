@@ -1,97 +1,161 @@
-# 🧠 Master-MCP: The Autonomous Reasoning Engine
+# Versatile-Mcp Unified Suite 🚀
 
-**Master-MCP** is a next-generation Model Context Protocol (MCP) server designed to transform standard AI agents into highly autonomous, self-correcting operational powerhouses. Built with a **Native-First** philosophy, it provides a blazingly fast, zero-dependency reasoning core that lives entirely on your hardware.
+Versatile-Mcp, modern AI ajanları için tasarlanmış tek girişli, yüksek performanslı ve modüler bir MCP (Model Context Protocol) sunucu ekosistemidir. Bu suite, ajanların zekasını, hafızasını ve erişim gücünü maksimize ederken karmaşıklığı minimize eden bir "Agentic OS" katmanı görevi görür.
 
----
-
-## ⚡ The Brain: Sequential Thinking & Orchestration
-Unlike traditional MCP tools, Master-MCP features a sophisticated **Reasoning Loop** powered by `sequentialthinking`. This is the intelligence layer where the magic happens:
-
-- **🤖 Autonomous Orchestration**: The engine analyzes the assistant's thoughts in real-time to predict the next best tool, calculate confidence scores, and identify the root cause of errors.
-- **🧬 Hybrid Semantic Search**: Features a unified `search_semantic_memory` engine that synthesizes **Keyword Depth** (Ripgrep) with **Vector Intelligence** (Conceptual matching) for precise yet context-aware discovery.
-- **🛡️ Intelligent Root Discovery**: Automatically identifies project boundaries by locating the `main.py` entry point or standard version control markers, ensuring zero-config orchestration.
-- **🔄 Zero-Disk Loop Protection**: Advanced in-memory history tracking detects and breaks repetitive tool usage loops before they waste cycles.
+> **Temel İçgörü:** "Her ek karar, hata olasılığını çarpar. %95 başarı → 10 adımda %60'a düşer. Güvenilirlik önce, otonomi sonra."
 
 ---
 
-## 🏗️ Modular Architecture
-Master-MCP follows a **Micro-Modular Monolith** pattern for maximum maintainability and performance:
+## 🏛️ Mimari Mimari ve Katmanlar
 
-```text
-mcp_master/
-├── main.py            # Unified Entry Point & Root Marker
-├── services/          # Pure Business Logic (Infrastructure, AI, Knowledge)
-├── tools/             # AI Tool Interfaces (Thin Wrappers)
-├── resources/         # Static Assets (bin, config, models, prompts)
-└── internal/          # Development Workspace (scratch, scripts, tests)
+Sistem, üç ana uzmanlık katmanından oluşur ve merkezi bir `main.py` üzerinden yönetilir:
+
+```mermaid
+graph TD
+    User((Kullanıcı/Ajan)) --> Main[main.py - Suite Manager]
+    Main --> Brain[🧠 Versatile-Brain]
+    Main --> Master[🛠️ Master-MCP]
+    Main --> Remote[🌐 Versatile-Remote]
+
+    subgraph "🧠 Brain Layer (Hafıza & Akıl Yürütme)"
+        Brain --> Memory[(Semantic Memory)]
+        Brain --> Thinking[Sequential Thinking]
+    end
+
+    subgraph "🛠️ Master Layer (Sistem & Doküman)"
+        Master --> Files[Rich Document Reader]
+        Master --> Analysis[Workspace Analysis]
+    end
+
+    subgraph "🌐 Remote Layer (Uzak Erişim)"
+        Remote --> SSH[SSH Operations]
+        Remote --> Jobs[Async Job Tracking]
+    end
 ```
 
----
+### 1. 🧠 Versatile-Brain (Intelligence & Memory)
+Bilinçli hafıza ve mantık yürütme katmanıdır. Ajanın geçmiş kararları hatırlamasını ve karmaşıklığı yönetmesini sağlar.
+- **Hafıza:** Semantik arama ile projeye özgü bilgileri (fact/category) depolar.
+- **Akıl Yürütme:** `sequentialthinking` ile lineer olmayan problemleri adım adım çözer.
 
-## 🚀 Key Capabilities
+### 2. 🛠️ Master-MCP (Workspace & Content)
+Yerel sistem ve dokümanlarla etkileşim kuran katmandır.
+- **Zengin Okuma:** PDF, Docx, EPUB ve büyük kod dosyalarını bağlamı koruyarak okur.
+- **Denetim:** `validate_syntax` ve `grep_search` ile kod kalitesini ve tutarlılığını sağlar.
 
-### 🧠 Intelligence & Memory
-- **Sequential Reasoning**: Dynamic linear and branching thought chains.
-- **Hybrid Semantic Memory**: Multi-mode search (`code`, `memory`, `hybrid`) with transparent source tagging (`[K]` vs `[V]`).
-- **Persistent Knowledge**: Durable fact storage with cross-session recall and deterministic root identification.
-
-### 🔍 Codebase & File Operations
-- **Deep Inspection**: Ultra-fast recursive search using bundled `ripgrep` integrated into the hybrid engine.
-- **Smart Reading**: Native parsing for **PDF, DOCX, and EPUB** alongside source code.
-- **Precision Refactoring**: Atomic multi-block replacements and syntax validation for Python, JS, TS, and more.
-
-### 🌐 Research & Diagnostics
-- **Live Discovery**: Real-time Web Search and StackOverflow integration.
-- **System Awareness**: Deep hardware/OS diagnostics and network port checking.
-- **Remote Execution**: Secure remote command orchestration (WSL/SSH).
+### 3. 🌐 Versatile-Remote (Secure Execution)
+Uzak sunucularda güvenli işlem yapma yeteneğidir.
+- **Asenkron Yapı:** Uzun süren işleri arka planda çalıştırır ve durum takibi yapar.
 
 ---
 
-## 📦 Native Performance (Pre-Bundled)
-Master-MCP eliminates "Dependency Hell" by shipping with high-performance binaries pre-configured for Windows:
-- **Ripgrep**: The gold standard for text search performance.
-- **Ruff**: Lighting-fast Python linting and formatting.
-- **Oxlint & Biome**: Modern, high-speed web development toolchain.
-- **Embedded Llama**: Native multi-lingual embedding models.
+## 🛡️ Temel Prensipler ve Güvenlik (Guardrails)
+
+Ajanlarımızın başarısını şansa bırakmıyoruz. Tüm işlemler şu 6 temel prensip üzerine inşa edilmiştir:
+
+1.  **Güvenilirlik Önce:** Her adımda hata payını hesapla ve doğrula (0.95^10 kuralı).
+2.  **Kapsam Kısıtla:** Spesifik alanlarda uzmanlaşmış (domain-specific) yetenekleri kullan.
+3.  **İnsan Onayı (Human-in-the-loop):** Kritik ve geri döndürülemez aksiyonlar (`delete_*`, `ssh_execute`) için **her zaman** kullanıcı onayı müzakere edilemezdir.
+4.  **Sessiz Bozulma Yerine Dur:** Bir hata tespit edildiğinde sessizce devam etmek yerine, güvenli bir şekilde dur ve geri al (rollback).
+5.  **Her Şeyi Logla:** Debuglanamayan ajan prodüksiyonda ölüdür. Tüm düşünce izlerini kaydet.
+6.  **En Az Yetki (Least Privilege):** Her görev için sadece gerekli olan yetki setini tanımla.
 
 ---
 
-## 🛠️ Quick Start
+## 🛠️ Detaylı Araç Referansı (API)
 
-### 1. Installation
+### 🧠 Zeka ve Hafıza
+| Araç | Görev | Önemli Parametreler |
+| :--- | :--- | :--- |
+| `commit_knowledge` | Bilgi kaydeder | `fact`, `category`, `project_root` |
+| `search_knowledge` | Hafızada arama | `query`, `n` (sonuç sayısı) |
+| `sequentialthinking` | Mantık yürütme | `thought`, `thought_number`, `total_thoughts` |
+| `workspace_summary` | Mimari özet | `directory` |
+
+### 🛠️ Workspace ve Dokümanlar
+| Araç | Görev | Önemli Parametreler |
+| :--- | :--- | :--- |
+| `read_rich_document` | PDF/Kod okuma | `file_path`, `start_line`, `end_line` |
+| `directory_tree` | Dosya ağacı | `directory`, `max_depth` |
+| `grep_search` | Ripgrep arama | `query`, `includes` (dosya filtreleri) |
+| `validate_syntax` | Kod denetimi | `file_path` |
+
+### 🌐 Uzak İşlemler
+| Araç | Görev | Önemli Parametreler |
+| :--- | :--- | :--- |
+| `ssh_execute` | Komut çalıştırır | `host`, `command`, `run_in_background` |
+| `check_job_status` | İş takibi | `job_id` |
+| `get_ssh_history` | SSH geçmişi | `host` |
+
+---
+
+## 🔄 Ajan Çalışma Desenleri (Agent Patterns)
+
+Versatile-Mcp, aşağıdaki stratejik desenlerle birlikte kullanıldığında maksimum verim sağlar:
+
+### 1. ReAct (Reasoning + Acting)
+`Thought → Action → Observation` döngüsü. Her adımdan sonra agent'ın neyi başardığını ve sonraki adımının ne olduğunu `sequentialthinking` ile belirtmesi zorunludur.
+
+### 2. Role-Based Self-Audit (Çoklu Perspektif)
+Hataları minimize etmek için tek bir ajana farklı roller vererek çapraz denetim sağlayın:
+- **Developer:** Mantık ve edge case'leri inceler.
+- **Security:** Güvenlik açıklarını tarar.
+- **Synthesizer:** Tüm bulguları birleştirir ve nihai aksiyonu sunar.
+
+---
+
+## 🚀 Kurulum ve Yapılandırma
+
+### 1. Kurulum
 ```bash
-# Clone the core engine
-git clone https://github.com/MSelcukAkbas/versatile-mcp.git
-cd versatile-mcp
-
-# Setup the environment
 pip install -r requirements.txt
 ```
 
-### 2. Configuration
-Add Master-MCP to your MCP host settings (e.g., Claude Desktop). 
+### 2. Ortam Değişkenleri (.env)
+| Değişken | Açıklama | Varsayılan |
+| :--- | :--- | :--- |
+| `BRAIN_DATA_DIR` | Hafıza verilerinin saklanacağı dizin | `~/.versatile-mcp` |
+| `EMBEDDING_MODEL_PATH`| Vektör modeli yolu (.gguf) | Zorunlu |
+| `REMOTE_LOG_DIR` | Uzak iş loglarının tutulacağı dizin | `./logs/remote` |
 
-> [!TIP]
-> **Zero-Config Root Discovery**: You no longer need manual markers! The engine automatically detects your project root by locating the `main.py` entry point or standard markers like `.git`.
+### 3. Çalıştırma
+```bash
+python main.py
+```
+
+### 4. Claude Desktop / IDE Yapılandırması
+Versatile-Mcp'yi bir MCP istemcisine (örn: Claude Desktop) kaydetmek için `mcp_config.json` dosyanıza aşağıdaki yapılandırmayı ekleyin.
+
+**Dikkat:** `args` kısmındaki dosya yolunu kendi sisteminize göre güncelleyin.
 
 ```json
 {
   "mcpServers": {
-    "master-mcp": {
+    "versatile-mcp": {
       "command": "python",
-      "args": ["C:/absolute/path/to/mcp_master/main.py"],
+      "args": [
+        "C:/KULLANICI_YOLU/Versatile-Mcp/main.py"
+      ],
       "env": {
-        "STACK_EXCHANGE_API_KEY": "optional_key"
-      }
+        "BRAIN_DATA_DIR": "C:/Users/KULLANICI/.versatile-mcp", // (Opsiyonel - Varsayılan: ~/.versatile-mcp)
+        "EMBEDDING_MODEL_PATH": "C:/MODELS/model.gguf" // (Zorunlu)
+      },
+      "disabled": false
     }
   }
 }
 ```
 
----
-
-## 🛡️ Privacy & Security
-Master-MCP is built for **Private Reasoning**. Your thoughts, project code, and memory facts never leave your machine. The orchestration logic and semantic indexing are handled entirely offline by the embedded intelligence layer.
+> **İpucu:** Ortam değişkenlerini doğrudan JSON içindeki `env` bloğuna yazabilir veya sistem genelinde tanımlayabilirsiniz. (Not: Yukarıdaki JSON'da yer alan `//` yorum satırları sadece açıklama amaçlıdır, bazı sistemlerde hata almamak için bunları silebilirsiniz.)
 
 ---
-**Maintained by MSelcukAkbas** | [Project Origin](https://github.com/MSelcukAkbas/versatile-mcp)
+
+## 👨‍💻 Geliştirici Rehberi
+
+Yeni bir araç veya sunucu eklemek için:
+1. `servers/` altında ilgili katmanda (brain/master/remote) fonksiyonunuzu tanımlayın.
+2. `main.py` dosyasındaki `Mcps` sınıfına yeni aracınızı kaydedin.
+3. Parametrelerin tip tanımlamalarını (Type Hints) eksiksiz yapın.
+
+---
+*Geliştirilen Her Karar, Güvenilir Bir Gelecek İçin.*
