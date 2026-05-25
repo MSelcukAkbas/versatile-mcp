@@ -220,4 +220,12 @@ Yeni bir araç veya sunucu katmanı eklemek için:
 3. ** main.py Kaydı:** Yeni araç setinizin register fonksiyonunu `main.py` başlangıcında çağırarak orkestrasyona dahil edin.
 
 ---
+
+## 🔗 İlişkili Projeler ve Entegrasyonlar
+
+Bu "Agentic OS" ekosistemini zenginleştiren diğer temel bileşenler:
+
+* **[Versatile-Skills](https://github.com/MSelcukAkbas/versatile-skills):** Ajanların yeteneklerini ve dinamik becerilerini (skills) yönetmesini sağlayan, Versatile-Mcp ile entegre çalışacak şekilde tasarlanmış gelişmiş yetenek ve otomasyon kütüphanesidir.
+
+---
 *Geliştirilen Her Karar, Güvenilir Bir Gelecek İçin.*
