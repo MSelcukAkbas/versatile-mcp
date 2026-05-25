@@ -9,6 +9,8 @@ python-dotenv>=1.1.0
 # Intelligence & Search (Brain)
 llama-cpp-python==0.3.20
 numpy==2.4.4
+chromadb>=0.5.0
+markdown>=3.7
 
 # Remote Execution (Remote)
 asyncssh==2.20.0
