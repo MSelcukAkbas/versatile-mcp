@@ -37,7 +37,5 @@ Thumbs.db
 diagnostics/
 servers/remote/history.jsonl
 
-# Plan & Design documents (local-only)
-implementation_plan.md
-integration_analysis.md
-tools_comparison.md
+# Plan, Design & Init documents (local-only)
+init.md
