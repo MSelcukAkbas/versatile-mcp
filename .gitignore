@@ -35,3 +35,9 @@ app.log
 .DS_Store
 Thumbs.db
 diagnostics/
+servers/remote/history.jsonl
+
+# Plan & Design documents (local-only)
+implementation_plan.md
+integration_analysis.md
+tools_comparison.md

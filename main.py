@@ -10,6 +10,7 @@ root_path = os.path.dirname(os.path.abspath(__file__))
 if root_path not in sys.path:
     sys.path.insert(0, root_path)
 
+
 # Add master path specifically for its internal logic
 master_path = os.path.join(root_path, "servers", "master")
 if master_path not in sys.path:
@@ -25,17 +26,29 @@ load_dotenv(os.path.join(root_path, ".env"))
 # 2. Core Imports
 from core.config import Config, validate_project_root
 from core.helpers.ignores import IgnoreService
-from core.helpers.llama_engine.provider import LlamaProvider
+from core.helpers.embedder import Embedder
+from core.helpers.chunker import Chunker
 
 # 3. Server-Specific Imports
-# Brain
-from servers.brain.services.memory.service import MemoryService
-from servers.brain.services.reasoning.thinking import ThinkingLoop
+# Brain - Storage
+from servers.brain.storage.hybrid_store import HybridStore
+
+# Brain - Services
+from servers.brain.services.memory_service import MemoryService
+from servers.brain.services.graph_service import GraphService
+from servers.brain.services.reasoning_service import ReasoningService
+from servers.brain.services.distillation_service import DistillationService
+from servers.brain.services.retrieval_pipeline import RetrievalPipeline
 from servers.brain.services.analysis.service import WorkspaceAnalyzerService
-from servers.brain.tools.reasoning import register_reasoning_tools
-from servers.brain.tools.memory import register_memory_tools
+
+# Brain - Tools
+from servers.brain.tools.memory_tools import register_memory_tools
+from servers.brain.tools.reasoning_tools import register_reasoning_tools
+from servers.brain.tools.graph_tools import register_graph_tools
+from servers.brain.tools.codebase_tools import register_codebase_tools
+from servers.brain.tools.user_tools import register_user_tools
+from servers.brain.tools.project_tools import register_project_tools
 from servers.brain.tools.workspace import register_workspace_tools
-from servers.brain.tools.intelligence import register_intelligence_tools
 
 # Master
 from resources.config.settings import PATHS, ALLOWED_ROOTS, ensure_directories
@@ -59,6 +72,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger("Versatile-Mcp-Unified")
 logging.getLogger("mcp").setLevel(logging.WARNING)
+logging.getLogger("chromadb").setLevel(logging.WARNING)
+logging.getLogger("httpx").setLevel(logging.WARNING)
 
 Config.setup()
 ensure_directories()
@@ -71,17 +86,38 @@ mcp = FastMCP("Versatile-Mcp")
 
 # 7. Initialize & Register ALL Services
 # --- Shared Helpers ---
-llama_engine = LlamaProvider(Config.MODEL_PATH, n_gpu_layers=0, n_threads=4)
 ignore_svc = IgnoreService(project_root=".", default_ignore_path=PATHS["default_ignores"])
 
-# --- Brain Cluster ---
-memory_svc = MemoryService(Config.DATA_DIR, llama_engine)
-analyzer_svc = WorkspaceAnalyzerService(ignore_svc)
-thinking_loop = ThinkingLoop(memory_svc=memory_svc, llama_svc=llama_engine)
+# --- Brain Cluster (Versatile-Memory Integration) ---
+embedder = Embedder(
+    Config.MODEL_PATH,
+    n_gpu_layers=Config.N_GPU_LAYERS,
+    n_threads=Config.N_THREADS,
+    n_ctx=Config.N_CTX,
+)
+chunker = Chunker(chunk_size=Config.CHUNK_SIZE, chunk_overlap=Config.CHUNK_OVERLAP)
 
-register_intelligence_tools(mcp, memory_svc, analyzer_svc, ignore_svc, validate_project_root)
-register_reasoning_tools(mcp, thinking_loop, validate_project_root)
-register_memory_tools(mcp, memory_svc, analyzer_svc, ignore_svc, validate_project_root)
+hybrid_store = HybridStore(
+    data_dir=Config.DATA_DIR,
+    embedder=embedder,
+    timeout=Config.DB_TIMEOUT,
+)
+
+memory_svc = MemoryService(hybrid_store)
+graph_svc = GraphService(hybrid_store.sqlite)
+reasoning_svc = ReasoningService(hybrid_store, embedder, memory_svc=memory_svc)
+distillation_svc = DistillationService(hybrid_store, memory_svc)
+retrieval_pipeline = RetrievalPipeline(hybrid_store, embedder, graph_svc)
+
+analyzer_svc = WorkspaceAnalyzerService(ignore_svc)
+
+# Register Brain Tools
+register_memory_tools(mcp, memory_svc, retrieval_pipeline=retrieval_pipeline)
+register_reasoning_tools(mcp, reasoning_svc, distillation_svc)
+register_graph_tools(mcp, graph_svc)
+register_codebase_tools(mcp)
+register_user_tools(mcp, memory_svc, retrieval_pipeline)
+register_project_tools(mcp, memory_svc, retrieval_pipeline)
 register_workspace_tools(mcp, memory_svc, ignore_svc, analyzer_svc, validate_project_root)
 
 # --- Master Cluster ---
@@ -101,7 +137,7 @@ register_all_tools(mcp, master_services, PATHS)
 # --- Remote Cluster ---
 register_remote_tools(mcp, root_path)
 
-logger.info("Versatile-Mcp | Unified Suite | 13+ Tools Loaded | Ready.")
+logger.info("Versatile-Mcp | Unified Suite | 30+ Tools Loaded | Ready.")
 
 if __name__ == "__main__":
     sys.stdout = _real_stdout
